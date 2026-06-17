@@ -1,0 +1,33 @@
+{
+  "name": "fr.al3ks1s.addressableref",
+  "version": "0.1.0",
+  "displayName": "Addressable Referencer",
+  "description": "An ad9s addon to build asset bundles against already existing bundles. This project aims to provide modders a way to reduce the size of their bundles by referencing the base game's bundles.",
+  "unity": "6000.0",
+  "documentationUrl": "https://example.com/",
+  "changelogUrl": "https://example.com/changelog.html",
+  "licensesUrl": "https://example.com/licensing.html",
+  "dependencies": {
+    "com.unity.addressables": "3.1.0"
+ },
+  "keywords": [
+    "asset",
+    "resources",
+    "bundle",
+    "bundles",
+    "assetbundles",
+	"modding",
+	"mods"
+  ],
+  "repository": {
+    "url": "",
+    "type": "git",
+    "revision": ""
+  },
+  "author": {
+    "name": "Al3ks1s",
+    "email": "al3ks1sss@gmail.com",
+    "url": "https://al3ks1s.fr"
+  }
+}
+

@@ -1,0 +1,194 @@
+using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Experimental.GraphView;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.ResourceManagement.ResourceProviders;
+using static UnityEditor.AddressableAssets.Build.Layout.BuildLayout;
+
+public class CatalogAnalyzer
+{
+
+    public CatalogAnalyzer(string assetPath)
+    {
+        StreamingAssetsPath = assetPath;
+    }
+
+    public string StreamingAssetsPath { get; set; }
+
+    internal IResourceLocator Locator { get; private set; }
+    List<IResourceLocation> bundles;
+
+    List<IResourceLocation> labelBundles;
+    List<IResourceLocation> separateBundles;
+
+    IResourceLocation monoscript;
+    IResourceLocation unitybuiltins;
+
+    List<(IResourceLocation, AddressableAssetGroup)> groupMapping = new();
+
+    int globalProgress;
+    int labelProgress;
+    int packProgress;
+    int bundleProgress;
+
+
+    public void LoadCatalog(string catalogPath)
+    {
+        Locator = Addressables.LoadContentCatalogAsync(catalogPath).WaitForCompletion();
+        bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
+        monoscript = bundles.Find(f => f.PrimaryKey.Contains("monoscripts"));
+        unitybuiltins = bundles.Find(f => f.PrimaryKey.Contains("unitybuiltinassets"));
+
+        IdentifyGroups();
+    }
+    
+    public void IdentifyGroups()
+    {
+        List<IResourceLocation> assetBundles = bundles.Where(b => b.PrimaryKey.Contains("_assets_")).ToList();
+
+        labelBundles = assetBundles.Where(b => b.PrimaryKey.Split("/").Last().Contains("_assets_")).ToList();
+        separateBundles = assetBundles.Where(b => !b.PrimaryKey.Split("/").Last().Contains("_assets_")).ToList();
+
+        //using (var scope = new AssetDatabase.AssetEditingScope()) { 
+            CreateLabelsAssetGroups();
+            CreateSeparatelyPackedGroups();
+        //}
+
+    }
+
+    public void ClearReferenceGroups()
+    {
+        var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.Name.Contains("(Reference)")).ToArray();
+        foreach (var group in groups) 
+        {
+                AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(group);
+        }
+    }
+
+
+
+    public void CreateLabelsAssetGroups()
+    {
+
+        HashSet<string> labels = new HashSet<string>();
+        HashSet<string> groups = new HashSet<string>();
+
+        labels = labelBundles.Select(b => Regex.Replace(b.PrimaryKey.Split("_assets_").Last().Replace(".bundle", ""), "_[0-9a-f]{32}", "")).ToHashSet();
+        groups = labelBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
+
+        foreach (var label in labels)
+        {
+            if (!label.Equals(""))
+                AddressableAssetSettingsDefaultObject.Settings.AddLabel(label);
+        }
+
+        foreach (var group in groups)
+        {
+
+            var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel);
+            var groupBundles = labelBundles.Where(b => b.PrimaryKey.Split("/").Last().Split("_assets_").First().Equals(group));
+            
+            foreach (var bun in groupBundles)
+            {
+                groupMapping.Add((bun, assetGroup));
+            }
+        }
+    }
+
+    public void CreateSeparatelyPackedGroups()
+    {
+
+        HashSet<string> groups = separateBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
+
+        foreach (var group in groups)
+        {
+
+            var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+            var groupBundles = separateBundles.Where(b => b.PrimaryKey.Split("_assets_").First().Equals(group));
+
+            foreach (var bun in groupBundles)
+            {
+                groupMapping.Add((bun, assetGroup));
+            }
+        }
+    }
+
+    public void ProcessGroups()
+    {
+
+        List<Task> taskList = new();
+
+        foreach (var mapping in groupMapping)
+        {
+            BundleAnalyzer ba = new BundleAnalyzer(
+                mapping.Item1,
+                mapping.Item2,
+                StreamingAssetsPath,
+                monoscript
+            );
+            ba.ProcessBundle();
+
+        }
+
+    }
+
+    public static AddressableAssetGroup CreateOrGetGroup(string name, BundledAssetGroupSchema.BundlePackingMode mode)
+    {
+        var assetGroup = AddressableAssetSettingsDefaultObject.Settings.FindGroup($"{name} (Reference)");
+
+        if (assetGroup == null)
+        {
+            assetGroup = AddressableAssetSettingsDefaultObject.Settings.CreateGroup(
+                $"{name} (Reference)",
+                false,
+                false,
+                true,
+                new() {
+                        ScriptableObject.CreateInstance<AddressableReferenceSchema>(),
+                        CreateBundleSchema(
+                            mode
+                        ),
+                }
+            );
+        }
+
+        ((AddressableReferenceSchema)assetGroup.Schemas.Find(s => s is AddressableReferenceSchema)).Entries.Clear();
+    
+        return assetGroup;
+    
+    }
+
+    public static BundledAssetGroupSchema CreateBundleSchema(
+    BundledAssetGroupSchema.BundlePackingMode packMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether,
+    BundledAssetGroupSchema.BundleNamingStyle nameStyle = BundledAssetGroupSchema.BundleNamingStyle.AppendHash)
+    {
+
+        BundledAssetGroupSchema schema = BundledAssetGroupSchema.CreateInstance<BundledAssetGroupSchema>();
+
+        schema.InternalBundleIdMode = BundledAssetGroupSchema.BundleInternalIdMode.GroupGuid;
+        schema.BundleMode = packMode;
+        schema.BundleNaming = nameStyle;
+        schema.IncludeGUIDInCatalog = false;
+        schema.IncludeAddressInCatalog = false;
+        schema.IncludeLabelsInCatalog = false;
+
+        schema.UseAssetBundleCache = false;
+        schema.UseAssetBundleCrc = false;
+
+        return schema;
+    }
+
+
+}
