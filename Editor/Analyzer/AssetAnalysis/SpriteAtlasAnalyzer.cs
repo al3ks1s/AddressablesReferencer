@@ -1,18 +1,18 @@
 using UnityEngine;
 using UnityEngine.U2D;
 
-public class SpriteAtlasAnalyzer : IAssetAnalyzer<SpriteAtlas>
+public class SpriteAtlasAnalyzer : GenericAnalyzer<SpriteAtlas>
 {
 
     /// <inheritdoc />
-    public string CreateAssetEntry<SpriteAtlas>()
+    public override string CreateAssetEntry<SpriteAtlas>()
     {
         return string.Empty;
     }
 
 
     /// <inheritdoc />
-    public string CreateAssetReference<SpriteAtlas>()
+    public override string CreateAssetReference<SpriteAtlas>()
     {
         return string.Empty;
     }

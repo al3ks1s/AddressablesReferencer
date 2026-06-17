@@ -8,14 +8,14 @@ public interface IAssetAnalyzer<T>
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public string CreateAssetEntry<T>();
+    public abstract string CreateAssetEntry<T>();
 
     /// <summary>
     /// 
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public string CreateAssetReference<T>();
+    public abstract string CreateAssetReference<T>();
 
 
 

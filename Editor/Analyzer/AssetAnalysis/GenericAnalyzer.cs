@@ -3,14 +3,14 @@ using UnityEngine;
 public class GenericAnalyzer<T> : IAssetAnalyzer<T>
 {
     /// <inheritdoc />
-    public string CreateAssetEntry<T>()
+    public virtual string CreateAssetEntry<T>()
     {
         return string.Empty;
     }
 
 
     /// <inheritdoc />
-    public string CreateAssetReference<T>()
+    public virtual string CreateAssetReference<T>()
     {
         return string.Empty;
     }
