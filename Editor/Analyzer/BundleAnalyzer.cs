@@ -21,6 +21,7 @@ using UnityEngine.Rendering;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.U2D;
 using UnityEngine.UIElements;
+using static AssetHelperLib.BundleTools.BundleUtils;
 
 public class BundleAnalyzer
 {
@@ -126,6 +127,9 @@ public class BundleAnalyzer
         {
             loadedBundle = AssetBundle.LoadFromFile(ResolveBundlePath(location));   
         }
+
+        referenceEntry.cabName = CABFile.name;
+        referenceEntry.baseInternalId = location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
 
     }
 
@@ -242,7 +246,6 @@ public class BundleAnalyzer
 
     }
 
-
     public bool CheckMissingAsset(string assetPath, long pathId, out string assetGUID, out string newPath)
     {
         newPath = assetPath;
@@ -291,7 +294,7 @@ public class BundleAnalyzer
 
             string atlasGUID = AssetDatabase.AssetPathToGUID(assetPath);
             
-            foreach (var sprite in assetExt.baseField["m_PackedSpriteNamesToIndex.Array"])
+            foreach (var sprite in assetExt.baseField["m_PackedSpriteNameToIndex.Array"])
             {
 
                 string spriteName = sprite.AsString.Replace("]", "_");
@@ -318,6 +321,7 @@ public class BundleAnalyzer
                 {
                     Debug.Log($"No sprite found for {spriteName}");
                 }
+
 
                 string spritePath = AssetDatabase.GUIDToAssetPath(spriteGuid);
                 var spriteObject = AssetDatabase.LoadAssetAtPath(spritePath, typeof(Sprite));
@@ -402,19 +406,70 @@ public class BundleAnalyzer
                 obid = oid;
                 // Debug.Log($"Ref: {assetPath} {o.name} {o.GetType()}");
             }
+
+        }
+
+        if (AssetDatabase.GetMainAssetTypeFromGUID(new GUID(assetGUID)).Name.Equals("SpriteAtlas"))
+        {
+            CreateSpriteAtlasReferences(pathId);
         }
 
         // Debug.Log($"Identifier for {assetPath} {assetGUID} {obid}");
-
-        
-        referenceEntry.cabName = CABFile.name;
-        referenceEntry.baseInternalId = location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
 
         if (obid.localIdentifierInFile != 0)
             referenceEntry.m_ObjectMapping.Add(new ObjectMapping(obid, pathId));
 
     }
 
+    public void CreateSpriteAtlasReferences(long atlasId)
+    {
+        var assetExt = mgr.GetExtAsset(CABFile, 0, atlasId);
+
+        foreach (var sprite in assetExt.baseField["m_PackedSprites.Array"])
+        {
+            var spritePathId = sprite["m_PathID"].AsLong;
+
+            if (sprite["m_FileID"].AsInt != 0)
+                continue;
+
+            var spriteAsset = mgr.GetExtAsset(CABFile, 0, spritePathId);
+
+            Debug.Log($"Atlas: {assetExt.baseField["m_Name"].AsString} {spriteAsset.baseField == null}");
+
+            string spriteName = spriteAsset.baseField["m_Name"].AsString.Replace("]", "_");
+
+            var sprites = AssetDatabase.FindAssets($"{spriteName} t:Sprite");
+            string spriteGuid = sprites[0];
+
+            if (sprites.Length > 1)
+            {
+
+                foreach (var matchedSprite in sprites)
+                {
+                    if (Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(matchedSprite)).Equals(spriteName))
+                    {
+                        Debug.Log($"Asset is specifically {AssetDatabase.GUIDToAssetPath(matchedSprite)}");
+                        spriteGuid = matchedSprite;
+                        break;
+                    }
+                }
+
+            }
+            else if (sprites.Length == 0)
+            {
+                Debug.Log($"No sprite found for {spriteName}");
+            }
+
+
+            string spritePath = AssetDatabase.GUIDToAssetPath(spriteGuid);
+            var spriteObject = AssetDatabase.LoadAssetAtPath(spritePath, typeof(Sprite));
+
+            ObjectIdentifier.TryGetObjectIdentifier(spriteObject, out ObjectIdentifier objectId);
+            referenceEntry.m_ObjectMapping.Add(new ObjectMapping(objectId, spritePathId));
+
+        }
+
+    }
 
     // Utilities 
     private string getFolderPath(string path, string bundleName)

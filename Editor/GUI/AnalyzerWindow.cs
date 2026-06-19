@@ -41,7 +41,7 @@ public class AnalyzerWindow : EditorWindow
     {
         
         CatalogAnalyzer cat = new(text.value);
-        
+
         using (var scope = new AssetDatabase.AssetEditingScope()) { 
             cat.LoadCatalog(Path.Join(cat.StreamingAssetsPath, "catalog.bin"));
             cat.ProcessGroups();
