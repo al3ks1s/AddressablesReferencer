@@ -1,22 +1,30 @@
+using System.Collections.Generic;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 
-public interface IAssetAnalyzer<T>
+namespace AddressableReferencer.Editor.Analyzer
 {
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    public abstract string CreateAssetEntry<T>();
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    public abstract string CreateAssetReference<T>();
+    public interface IAssetAnalyzer
+    {
 
 
+        public abstract (AddressableAssetEntry, List<ObjectMapping>) Analyze(long pathId);
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public abstract AddressableAssetEntry CreateAssetEntry(string assetGUID, string[] labels = null, string assetPath = null);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public abstract List<ObjectMapping> CreateAssetReference();
+
+
+
+
+    }
 }

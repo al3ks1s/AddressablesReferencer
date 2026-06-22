@@ -26,7 +26,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             }
         }
 
-        [SerializeField]
+
         public List<AddressableReferenceEntry> m_Entries;
 
         public List<AddressableReferenceEntry> Entries

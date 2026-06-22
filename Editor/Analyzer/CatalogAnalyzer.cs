@@ -1,5 +1,3 @@
-using NUnit.Framework;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,13 +7,11 @@ using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
-using static UnityEditor.AddressableAssets.Build.Layout.BuildLayout;
 
 public class CatalogAnalyzer
 {
@@ -38,20 +34,20 @@ public class CatalogAnalyzer
 
     List<(IResourceLocation, AddressableAssetGroup)> groupMapping = new();
 
-    int globalProgress;
-    int labelProgress;
-    int packProgress;
-    int bundleProgress;
-
 
     public void LoadCatalog(string catalogPath)
     {
-        Locator = Addressables.LoadContentCatalogAsync(catalogPath).WaitForCompletion();
-        bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
-        monoscript = bundles.Find(f => f.PrimaryKey.Contains("monoscripts"));
-        unitybuiltins = bundles.Find(f => f.PrimaryKey.Contains("unitybuiltinassets"));
+        using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker()) {
 
-        IdentifyGroups();
+            progressTracker.UpdateTask($"Loading the catalog");
+
+            Locator = Addressables.LoadContentCatalogAsync(catalogPath).WaitForCompletion();
+            bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
+            monoscript = bundles.Find(f => f.PrimaryKey.Contains("monoscripts"));
+            unitybuiltins = bundles.Find(f => f.PrimaryKey.Contains("unitybuiltinassets"));
+
+            IdentifyGroups();
+        }
     }
     
     public void IdentifyGroups()
@@ -61,10 +57,8 @@ public class CatalogAnalyzer
         labelBundles = assetBundles.Where(b => b.PrimaryKey.Split("/").Last().Contains("_assets_")).ToList();
         separateBundles = assetBundles.Where(b => !b.PrimaryKey.Split("/").Last().Contains("_assets_")).ToList();
 
-        //using (var scope = new AssetDatabase.AssetEditingScope()) { 
-            CreateLabelsAssetGroups();
-            CreateSeparatelyPackedGroups();
-        //}
+        CreateLabelsAssetGroups();
+        CreateSeparatelyPackedGroups();
 
     }
 
@@ -77,50 +71,56 @@ public class CatalogAnalyzer
         }
     }
 
-
-
     public void CreateLabelsAssetGroups()
     {
-
-        HashSet<string> labels = new HashSet<string>();
-        HashSet<string> groups = new HashSet<string>();
-
-        labels = labelBundles.Select(b => Regex.Replace(b.PrimaryKey.Split("_assets_").Last().Replace(".bundle", ""), "_[0-9a-f]{32}", "")).ToHashSet();
-        groups = labelBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
-
-        foreach (var label in labels)
-        {
-            if (!label.Equals(""))
-                AddressableAssetSettingsDefaultObject.Settings.AddLabel(label);
-        }
-
-        foreach (var group in groups)
+        using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
         {
 
-            var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel);
-            var groupBundles = labelBundles.Where(b => b.PrimaryKey.Split("/").Last().Split("_assets_").First().Equals(group));
-            
-            foreach (var bun in groupBundles)
+            progressTracker.UpdateTask($"Creating label groups");
+            HashSet<string> labels = new HashSet<string>();
+            HashSet<string> groups = new HashSet<string>();
+
+            labels = labelBundles.Select(b => Regex.Replace(b.PrimaryKey.Split("_assets_").Last().Replace(".bundle", ""), "_[0-9a-f]{32}", "")).ToHashSet();
+            groups = labelBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
+
+            foreach (var label in labels)
             {
-                groupMapping.Add((bun, assetGroup));
+                if (!label.Equals(""))
+                    AddressableAssetSettingsDefaultObject.Settings.AddLabel(label);
+            }
+
+            foreach (var group in groups)
+            {
+
+                var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel);
+                var groupBundles = labelBundles.Where(b => b.PrimaryKey.Split("/").Last().Split("_assets_").First().Equals(group));
+
+                foreach (var bun in groupBundles)
+                {
+                    groupMapping.Add((bun, assetGroup));
+                }
             }
         }
     }
 
     public void CreateSeparatelyPackedGroups()
     {
-
-        HashSet<string> groups = separateBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
-
-        foreach (var group in groups)
+        using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
         {
 
-            var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
-            var groupBundles = separateBundles.Where(b => b.PrimaryKey.Split("_assets_").First().Equals(group));
+            progressTracker.UpdateTask($"Creating folder groups");
+            HashSet<string> groups = separateBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
 
-            foreach (var bun in groupBundles)
+            foreach (var group in groups)
             {
-                groupMapping.Add((bun, assetGroup));
+
+                var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+                var groupBundles = separateBundles.Where(b => b.PrimaryKey.Split("_assets_").First().Equals(group));
+
+                foreach (var bun in groupBundles)
+                {
+                    groupMapping.Add((bun, assetGroup));
+                }
             }
         }
     }
@@ -130,15 +130,24 @@ public class CatalogAnalyzer
 
         List<Task> taskList = new();
 
+        int counter = 0;
+
         foreach (var mapping in groupMapping)
         {
-            BundleAnalyzer ba = new BundleAnalyzer(
-                mapping.Item1,
-                mapping.Item2,
-                StreamingAssetsPath,
-                monoscript
-            );
-            ba.ProcessBundle();
+            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            {
+
+                progressTracker.UpdateTask($"({++counter}/{groupMapping.Count}) - Processing bundle : {Path.GetFileName(mapping.Item1.InternalId)}");
+
+                BundleAnalyzer ba = new BundleAnalyzer(
+                    mapping.Item1,
+                    mapping.Item2,
+                    StreamingAssetsPath,
+                    monoscript
+                );
+                ba.ProcessBundle();
+            
+            }
 
         }
 
@@ -164,8 +173,6 @@ public class CatalogAnalyzer
             );
         }
 
-        ((AddressableReferenceSchema)assetGroup.Schemas.Find(s => s is AddressableReferenceSchema)).Entries.Clear();
-    
         return assetGroup;
     
     }

@@ -26,6 +26,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         public List<ObjectMapping> m_ObjectMapping = new();
         // public Dictionary<ObjectIdentifier, long> m_ObjectMapping;
 
+        [SerializeField]
+        public bool isDone = false;
+
 
         public Dictionary<ObjectIdentifier, long> ObjectMappingDict
         {
@@ -37,7 +40,8 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
                 foreach (var kvp in m_ObjectMapping)
                 {
-                    mapping.TryAdd(kvp.m_objectId, kvp.m_pathId);
+                    if (kvp.m_objectId != null)
+                        mapping.TryAdd(kvp.m_objectId, kvp.m_pathId);
                 }
 
                 return mapping; 
