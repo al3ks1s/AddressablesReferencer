@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
-
+// MIT License Copyright (c) 2026 flibber-hk - https://github.com/flibber-hk/AssetHelperLib/blob/main/AssetHelperLib/IO/RentedFileArray.cs
 
 namespace AddressableReferencer.Editor.Analyzer { 
     /// <summary>

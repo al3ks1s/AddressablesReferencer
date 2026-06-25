@@ -69,6 +69,7 @@ public class CatalogAnalyzer
         {
                 AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(group);
         }
+        
     }
 
     public void CreateLabelsAssetGroups()

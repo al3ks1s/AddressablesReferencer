@@ -119,7 +119,9 @@ public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
     /// <inheritdoc />
     protected override string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
     {
-        
+
+        Debug.Log($"Processing schema of {assetGroup.Name}");
+
         if (schema is AddressableReferenceSchema)
         {
             ProcessReferenceSchema(schema as AddressableReferenceSchema, assetGroup, aaContext);

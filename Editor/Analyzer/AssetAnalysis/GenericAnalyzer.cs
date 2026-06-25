@@ -46,11 +46,8 @@ namespace AddressableReferencer.Editor.Analyzer {
         protected AssetsFileInstance MonoscriptFile { get { return m_parentAnalyzer.monoscriptFile; } }
         protected AssetFileInfo AssetBundle { get { return m_parentAnalyzer.assetBundle; } }
         protected int AssetCount { get { return m_parentAnalyzer.AssetCount; } }
-
         protected string[] Labels { get { return m_parentAnalyzer.Labels; } }
         
-
-
         public GenericAnalyzer(BundleAnalyzer parentAnalyzer)
         {
             m_parentAnalyzer = parentAnalyzer;
@@ -68,7 +65,13 @@ namespace AddressableReferencer.Editor.Analyzer {
 
             AddressableAssetEntry entry = CreateOrGetAssetEntry(assetGUID, newPath);
 
-            List<ObjectMapping> references = new() { CreateAssetReference(pathId, assetGUID, newPath) };
+            var createdReference = CreateAssetReference(pathId, assetGUID, newPath);
+
+
+            List<ObjectMapping> references = new();
+
+            if (createdReference != null)
+                references.Add(createdReference);
 
             return (entry, references);
         }
@@ -128,7 +131,6 @@ namespace AddressableReferencer.Editor.Analyzer {
             return null;
 
         }
-
         
         protected bool CheckAsset(UnityEngine.Object obj, AssetExternal assetExt)
         {
@@ -237,7 +239,6 @@ namespace AddressableReferencer.Editor.Analyzer {
         {
             return GenericBuilder.GetAnalyzer(assetType, m_parentAnalyzer).CreateMissingAsset(pathId, assetPath);
         }
-
 
     }
 

@@ -32,6 +32,8 @@ public class AnalyzerWindow : EditorWindow
         rootVisualElement.Add(button);
         rootVisualElement.Add(text);
 
+        
+
     }
 
 

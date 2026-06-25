@@ -1,4 +1,5 @@
 using AssetsTools.NET.Extra;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -33,29 +34,28 @@ namespace AddressableReferencer.Editor.Analyzer
             var atlasBundleAsset = AssetManager.GetExtAsset(CabFile, 0, pathId);
 
             var sa = AssetDatabase.LoadAssetAtPath(entry.AssetPath, typeof(SpriteAtlas)) as SpriteAtlas;
-
-            Debug.Log($"{sa.GetPackables().Length} sprites packed");
-
             var sprites = sa.GetPackables();
 
             int spriteIndex = 0;
 
             for (int i = 0; i < atlasBundleAsset.baseField["m_PackedSprites.Array"].AsArray.size; i++)
             {
-                if (atlasBundleAsset.baseField["m_PackedSprites.Array"][i]["m_FileID"].AsInt != 0)
-                    continue;
+                //if (atlasBundleAsset.baseField["m_PackedSprites.Array"][i]["m_FileID"].AsInt != 0)
+                //    continue;
 
                 var spritePathID = atlasBundleAsset.baseField["m_PackedSprites.Array"][i]["m_PathID"].AsLong;
-                var spriteAsset = AssetManager.GetExtAsset(CabFile, 0, spritePathID);
+
+                var spriteName = atlasBundleAsset.baseField["m_PackedSpriteNamesToIndex.Array"][i].AsString;
 
                 var packedSprite = sprites[spriteIndex] as Sprite;
 
-                if (packedSprite.name != spriteAsset.baseField["m_Name"].AsString)
-                    Debug.LogWarning($"Sprite name issue! {spriteAsset.baseField["m_Name"].AsString} is not {packedSprite.name}. Recheck if the object is the correct one");
+                if (packedSprite.name != spriteName)
+                    Debug.LogError($"Sprite name issue! {spriteName} is not {packedSprite.name}. Recheck if the object is the correct one");
 
-                if (ObjectIdentifier.TryGetObjectIdentifier(packedSprite, out ObjectIdentifier objectId))
-                    spriteObjects.Add(new ObjectMapping(objectId, spritePathID));
-
+                if (atlasBundleAsset.baseField["m_PackedSprites.Array"][i]["m_FileID"].AsInt == 0) { 
+                    if (ObjectIdentifier.TryGetObjectIdentifier(packedSprite, out ObjectIdentifier objectId))
+                        spriteObjects.Add(new ObjectMapping(objectId, spritePathID));
+                }
                 spriteIndex++;
 
             }
@@ -63,4 +63,4 @@ namespace AddressableReferencer.Editor.Analyzer
         }
 
     }
-}
+} 
