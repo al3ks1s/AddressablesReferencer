@@ -120,7 +120,7 @@ public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
     protected override string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
     {
 
-        Debug.Log($"Processing schema of {assetGroup.Name}");
+        // Debug.Log($"Processing schema of {assetGroup.Name}");
 
         if (schema is AddressableReferenceSchema)
         {

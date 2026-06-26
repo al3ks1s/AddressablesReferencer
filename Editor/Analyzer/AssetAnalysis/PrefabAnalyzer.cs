@@ -1,6 +1,7 @@
 using AssetsTools.NET.Extra;
 using Steamworks;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
@@ -52,15 +53,17 @@ namespace AddressableReferencer.Editor.Analyzer
                 return objects;
             }
 
+
+
             for (int i = 0; i < currentGO.GetComponentCount(); i++)
             {
                 var component = currentGO.GetComponentAtIndex(i);
                 ObjectIdentifier.TryGetObjectIdentifier(component, out var objectId);
 
                 if (!(component.GetType() == typeof(Transform)))
-                    objects.Add(new ObjectMapping(objectId, pathId));
+                    objects.Add(new ObjectMapping(objectId, assetDeps.InternalPaths.ToList()[i]));
     
-                Debug.Log($"Prefab object at {assetPath} : {component.name} {component.GetType()} {objectId.guid} {objectId.localIdentifierInFile}");
+                // Debug.Log($"Prefab object at {assetPath} : {component.name} {component.GetType()} {objectId.guid} {objectId.localIdentifierInFile}");
 
             }
 

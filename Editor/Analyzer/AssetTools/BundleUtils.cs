@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+// MIT License Copyright (c) 2026 flibber-hk -  https://github.com/flibber-hk/AssetHelperLib/blob/main/AssetHelperLib/BundleTools/BundleUtils.cs
+
 namespace AddressableReferencer.Editor.Analyzer { 
 
     /// <summary>
@@ -108,6 +110,14 @@ namespace AddressableReferencer.Editor.Analyzer {
             long goPathId = transform["m_GameObject.m_PathID"].AsLong;
             AssetTypeValueField go = mgr.GetBaseField(afileInst, goPathId);
             return go["m_Name"].AsString;
+        }
+
+        public static AssetData GetTransform(this AssetsManager mgr, AssetsFileInstance afileInst, AssetFileInfo gameObjectInfo)
+        {
+            var goField = mgr.GetBaseField(afileInst, gameObjectInfo);
+            var transformAsset = mgr.GetExtAsset(afileInst, 0, goField["m_Component"][0]["component.m_PathId"].AsLong);
+            
+            return new AssetData(transformAsset.info, transformAsset.baseField);
         }
 
         /// <summary>
@@ -299,5 +309,7 @@ namespace AddressableReferencer.Editor.Analyzer {
                 yield return (name, assetType);
             }
         }
+    
+
     }
 }

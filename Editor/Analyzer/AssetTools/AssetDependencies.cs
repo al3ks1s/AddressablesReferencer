@@ -2,6 +2,8 @@ using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using System.Collections.Generic;
 
+// MIT License Copyright (c) 2026 flibber-hk - https://github.com/flibber-hk/AssetHelperLib/blob/main/AssetHelperLib/BundleTools/AssetDependencies.cs
+
 namespace AddressableReferencer.Editor.Analyzer { 
 
     /// <summary>
@@ -85,6 +87,7 @@ namespace AddressableReferencer.Editor.Analyzer {
         public Config Settings { get; set; }
 
         private readonly Dictionary<long, ChildPPtrs> _immediateDeps = new();
+        private readonly Dictionary<long, ChildPPtrs> _GameObjectHierarchyDeps = new();
         private readonly Dictionary<long, ChildPPtrs> _bundleDeps = new();
 
         /// <summary>
@@ -194,9 +197,29 @@ namespace AddressableReferencer.Editor.Analyzer {
         /// </summary>
         /// <param name="assetPathId"></param>
         /// <returns></returns>
-        public ChildPPtrs FindChildGO(long assetPathId)
+        public ChildPPtrs FindChildGO(long assetPathId, bool recursive = false)
         {
-            return null;
+            if (_immediateDeps.TryGetValue(assetPathId, out ChildPPtrs cached))
+            {
+                Hits++;
+                return cached;
+            }
+
+            Misses++;
+
+            AssetFileInfo info = _afileInst.file.GetAssetInfo(assetPathId);
+            ChildPPtrs childPPtrs = ChildPPtrs.CreateNew();
+
+            AssetTypeValueField transformField = _mgr.GetTransform(_afileInst, info).ValueField;
+
+            foreach (AssetTypeValueField childVf in transformField["m_Children.Array"].Children)
+            {
+                long childPptr = childVf["m_PathID"].AsLong;
+                childPPtrs.InternalPaths.Add(childPptr);   
+            }
+
+            return childPPtrs;
+
         }
     
     }
