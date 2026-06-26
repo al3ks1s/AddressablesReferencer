@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-// MIT License Copyright (c) 2026 flibber-hk -  https://github.com/flibber-hk/AssetHelperLib/blob/main/AssetHelperLib/BundleTools/BundleUtils.cs
+// MIT License Copyright (c) 2026 flibber-hk -  https://github.com/flibber-hk/AssetHelperLib/
 
 namespace AddressableReferencer.Editor.Analyzer { 
 

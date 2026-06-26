@@ -53,8 +53,6 @@ namespace AddressableReferencer.Editor.Analyzer
                 return objects;
             }
 
-
-
             for (int i = 0; i < currentGO.GetComponentCount(); i++)
             {
                 var component = currentGO.GetComponentAtIndex(i);

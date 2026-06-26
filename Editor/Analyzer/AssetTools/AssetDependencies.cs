@@ -2,7 +2,7 @@ using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using System.Collections.Generic;
 
-// MIT License Copyright (c) 2026 flibber-hk - https://github.com/flibber-hk/AssetHelperLib/blob/main/AssetHelperLib/BundleTools/AssetDependencies.cs
+// MIT License Copyright (c) 2026 flibber-hk - https://github.com/flibber-hk/AssetHelperLib/
 
 namespace AddressableReferencer.Editor.Analyzer { 
 
