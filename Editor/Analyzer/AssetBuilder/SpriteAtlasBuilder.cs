@@ -70,7 +70,7 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
         if (sprites.Length > 1)
         {
 
-            // Debug.Log($"Found more than one sprite for {spriteName}");
+            Debug.Log($"Found {sprites.Length} sprites for {spriteName}");
 
             List<string> validTextureSprites = new();
             List<string> validPhysicsSprites = new();
@@ -144,7 +144,7 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
             if (validRectSprites.Count == 1)
                 spriteGuid = validRectSprites[0];
 
-            // Debug.Log($"After filtering, sprites for {spriteName} is {Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(spriteGuid))} {validTextureSprites.Count} {validPhysicsSprites.Count} {validRectSprites.Count}");
+            Debug.Log($"After filtering, sprites for {spriteName} is {Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(spriteGuid))} {validTextureSprites.Count} {validPhysicsSprites.Count} {validRectSprites.Count}");
 
         }
         else if (sprites.Length == 0)
