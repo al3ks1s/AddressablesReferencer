@@ -108,6 +108,8 @@ namespace AddressableReferencer.Editor.Analyzer {
         {
 
             var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId);
+            
+            
 
             ObjectIdentifier obid = new();
             ObjectIdentifier[] assetRepresentations = ContentBuildInterface.GetPlayerAssetRepresentations(new GUID(assetGUID), EditorUserBuildSettings.activeBuildTarget);
@@ -127,7 +129,7 @@ namespace AddressableReferencer.Editor.Analyzer {
                 return new ObjectMapping(obid, pathId);
 
             Debug.LogWarning($"Asset:{assetPath} of type {assetExt.baseField.TypeName} couldn't be matched to an asset representation.");
-
+            
             return null;
 
         }
@@ -146,6 +148,8 @@ namespace AddressableReferencer.Editor.Analyzer {
             {
                 return true;
             }
+
+            Debug.Log($"Type : id{assetExt.info.TypeId} {Enum.GetName(typeof(AssetClassID), assetExt.info.TypeId)}");
 
             return (obj.GetType().Name == actualType && obj.name == assetExt.baseField["m_Name"].AsString);
 

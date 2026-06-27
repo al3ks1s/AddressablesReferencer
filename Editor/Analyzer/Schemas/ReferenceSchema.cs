@@ -110,6 +110,12 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             EditorGUI.showMixedValue = false;
         }
 
+        public void SaveData()
+        {
+            SetDirty(true);
+        }
+
+
     }
 
 

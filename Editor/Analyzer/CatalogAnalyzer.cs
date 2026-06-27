@@ -62,12 +62,13 @@ public class CatalogAnalyzer
 
     }
 
-    public void ClearReferenceGroups()
+    public void SaveReferenceSchemas()
     {
-        var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.Name.Contains("(Reference)")).ToArray();
+        var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
         foreach (var group in groups) 
         {
-                AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(group);
+            AddressableReferenceSchema schema = group.Schemas.Find(s => s is AddressableReferenceSchema) as AddressableReferenceSchema;
+            schema.SaveData();
         }
         
     }
@@ -151,6 +152,8 @@ public class CatalogAnalyzer
             }
 
         }
+
+        SaveReferenceSchemas();
 
     }
 

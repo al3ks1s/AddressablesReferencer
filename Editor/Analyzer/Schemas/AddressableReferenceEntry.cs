@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using UnityEditor.Build.Content;
 using UnityEngine;
-using UnityEngine.ResourceManagement.ResourceLocations;
+
 namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 {
     /// <summary>
