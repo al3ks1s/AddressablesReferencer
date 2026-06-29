@@ -2,15 +2,47 @@ using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.U2D;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.TextCore.Text;
 using UnityEngine.U2D;
+using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
 
 public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
 {
     public SpriteAtlasBuilder(BundleAnalyzer parentAnalyzer) : base(parentAnalyzer)
     {
+    }
+    
+    private record TextureNameInfo(string index, string resolution, string format, string name, string hash);
+    private TextureNameInfo ExtractTextureNameInfo(string textureName)
+    {
+        // sactx-[Index]-[Resolution]-[Format]-[AtlasName]-[Hash]
+
+        if (!textureName.StartsWith("sactx"))
+        {
+            // Debug.LogError($"ExtractTextureNameInfo : {textureName} is an invalid texture name");
+            return null;
+        }
+
+        string[] textureNameParts = textureName.Split("-");
+
+        if (textureNameParts.Length != 6)
+        {
+            // Debug.LogError($"ExtractTextureNameInfo : {textureName} is an invalid texture name");
+            return null;
+        }
+
+        return new TextureNameInfo(textureNameParts[1], textureNameParts[2], textureNameParts[3].Replace("|", "_"), textureNameParts[4], textureNameParts[5]);
+
+    }
+    private bool isValidTextureName(string textureName)
+    {
+        return ExtractTextureNameInfo(textureName) != null;
     }
 
     public override string CreateMissingAsset(long pathId, string assetPath)
@@ -27,7 +59,7 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
 
         AssetDatabase.CreateAsset(sa, assetPath);
         string atlasGUID = AssetDatabase.AssetPathToGUID(assetPath);
-        
+
         for (int i = 0; i < atlasBundleAsset.baseField["m_PackedSprites.Array"].AsArray.size; i++)
         {
 
@@ -39,7 +71,6 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
             } 
             else if (atlasBundleAsset.baseField["m_PackedSprites.Array"][i]["m_FileID"].AsInt > 0)
             {
-                Debug.LogWarning($"Sprite asset {atlasBundleAsset.baseField["m_PackedSpriteNamesToIndex.Array"][i].AsString} in atlas {Path.GetFileNameWithoutExtension(assetPath)} is external to the bundle, skippning but check if it still works");
                 spriteGuid = SearchExternalSprite(atlasBundleAsset, i);
             }
             else
@@ -53,7 +84,9 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
 
                 sa.Add(new[] { spriteObject });
             }
+
         }
+
         return atlasGUID;
     }
 
@@ -62,19 +95,17 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
         string spriteName = string.Empty;
 
         var spriteAsset = AssetManager.GetExtAsset(CabFile, 0, atlasBundleAsset.baseField["m_PackedSprites.Array"][index]["m_PathID"].AsLong);
-        spriteName = spriteAsset.baseField["m_Name"].AsString.Replace("]", "");
+        spriteName = spriteAsset.baseField["m_Name"].AsString;
 
-        var sprites = AssetDatabase.FindAssets($"{spriteName} t:Sprite");
+        var sprites = AssetDatabase.FindAssets($"{spriteName.Replace("]", "")} t:Sprite");
         string spriteGuid = sprites[0];
 
         if (sprites.Length > 1)
         {
 
-            Debug.Log($"Found {sprites.Length} sprites for {spriteName}");
+            // Debug.Log($"Found {sprites.Length} sprites for {spriteName}");
 
-            List<string> validTextureSprites = new();
-            List<string> validPhysicsSprites = new();
-            List<string> validRectSprites = new();
+            List<string> finalSprites = new();
 
             var renderDataTexture = AssetManager.GetExtAsset(
                 CabFile,
@@ -93,63 +124,52 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
             {
 
                 string tempSpritePath = AssetDatabase.GUIDToAssetPath(matchedSprite);
-                var tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
+                Sprite tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
 
                 if (tempSpriteObject.texture == null)
-                {
-                    Debug.LogError($"{tempSpriteObject.name} does not have a texture");
                     continue;
-                }
 
-                // Debug.Log($"{tempSpritePath}: {tempSpriteObject.texture.name} {renderDataTexture.baseField["m_Name"].AsString} {spriteName}");
-
-                // TODO : Put a better name filter than just replacing pipes with underscores, try to match against textures with the same name when you remove character at index of pipe?
-                if (renderDataTexture.baseField["m_Name"].AsString.Replace("|", "_").Equals(tempSpriteObject.texture.name) && tempSpriteObject.name.Equals(spriteName))
+                if (isValidTextureName(tempSpriteObject.texture.name)) { 
+                    if (!CompareTextureNames(renderDataTexture.baseField["m_Name"].AsString, tempSpriteObject.texture.name))
+                        continue;
+                } 
+                else // In case the texture isn't an atlas, it happens with directly addressable paths
                 {
-                    validTextureSprites.Add(matchedSprite);
+                    if (!renderDataTexture.baseField["m_Name"].AsString.Replace("|", "_").Equals(tempSpriteObject.texture.name))
+                        continue;
                 }
+
+                if (!tempSpriteObject.name.Equals(spriteName))
+                    continue;
+
+                if (!ComparePhysicsShapes(tempSpriteObject, spriteAsset))
+                    continue;
+
+                if (!tempSpriteObject.rect.Equals(spriteRect))
+                    continue;
+
+                finalSprites.Add(matchedSprite);
 
             }
 
-            if (validTextureSprites.Count > 1)
+            if (finalSprites.Count != 0)
             {
-                foreach (var matchedSprite in validTextureSprites)
+                if (finalSprites.Count > 1)
                 {
-                    string tempSpritePath = AssetDatabase.GUIDToAssetPath(matchedSprite);
-                    var tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
-
-                    if (ComparePhysicsShapes(tempSpriteObject, spriteAsset))
-                        validPhysicsSprites.Add(matchedSprite);
+                    Debug.LogWarning($"More than one sprite found for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} after filtering find a way to differentiate the following {finalSprites.Count} sprites {string.Join(", ", finalSprites.Select(g => Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(g))))}");
                 }
-            }
 
-            if (validPhysicsSprites.Count > 1)
+                spriteGuid = finalSprites[0];
+            }
+            else
             {
-                foreach (var matchedSprite in validPhysicsSprites)
-                {
-                    string tempSpritePath = AssetDatabase.GUIDToAssetPath(matchedSprite);
-                    var tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
-
-                    if (tempSpriteObject.rect.Equals(spriteRect))
-                        validRectSprites.Add(matchedSprite);
-                }
+                Debug.LogError($"No sprite matched for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} ");
             }
-
-            if (validTextureSprites.Count == 1)
-                spriteGuid = validTextureSprites[0];
-
-            if (validPhysicsSprites.Count == 1)
-                spriteGuid = validPhysicsSprites[0];
-
-            if (validRectSprites.Count == 1)
-                spriteGuid = validRectSprites[0];
-
-            Debug.Log($"After filtering, sprites for {spriteName} is {Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(spriteGuid))} {validTextureSprites.Count} {validPhysicsSprites.Count} {validRectSprites.Count}");
 
         }
         else if (sprites.Length == 0)
         {
-            Debug.LogWarning($"No sprite found for {spriteName}");
+            Debug.LogWarning($"No sprite found for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} ");
             return string.Empty;
         }
 
@@ -162,19 +182,17 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
         string spriteName = string.Empty;
 
         // var spriteAsset = AssetManager.GetExtAsset(CabFile, 0, atlasBundleAsset.baseField["m_PackedSpriteNamesToIndex.Array"][index].AsString);
-        spriteName = atlasBundleAsset.baseField["m_PackedSpriteNamesToIndex.Array"][index].AsString.Replace("]", "");
+        spriteName = atlasBundleAsset.baseField["m_PackedSpriteNamesToIndex.Array"][index].AsString;
 
-        var sprites = AssetDatabase.FindAssets($"{spriteName} t:Sprite");
+        var sprites = AssetDatabase.FindAssets($"{spriteName.Replace("]", "")} t:Sprite");
         string spriteGuid = sprites[0];
 
         if (sprites.Length > 1)
         {
 
-            Debug.Log($"Found more than one sprite for {spriteName}");
+            // Debug.Log($"Found more than one sprite for {spriteName}");
 
-            List<string> validTextureSprites = new();
-            // List<string> validPhysicsSprites = new();
-            List<string> validRectSprites = new();
+            List<string> finalSprites = new();
 
             var renderDataTexture = AssetManager.GetExtAsset(
                 CabFile,
@@ -191,61 +209,40 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
 
             foreach (var matchedSprite in sprites)
             {
-
                 string tempSpritePath = AssetDatabase.GUIDToAssetPath(matchedSprite);
-                var tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
+                Sprite tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
 
-                if (tempSpriteObject.texture == null)
-                {
-                    Debug.LogWarning($"{tempSpriteObject.name} does not have a texture, skipping this one but recheck");
+                // Info not in the atlas bundle for external sprites
+                //if (!CompareTextureNames(renderDataTexture.baseField["m_Name"].AsString, tempSpriteObject.texture.name))
+                //    continue;
+
+                if (!tempSpriteObject.name.Equals(spriteName))
                     continue;
-                }
 
-                Debug.Log($"{tempSpritePath}: {tempSpriteObject.texture.name} {renderDataTexture.baseField["m_Name"].AsString} {spriteName}");
+                // Info not in the atlas bundle for external sprites
+                //if (!ComparePhysicsShapes(tempSpriteObject, spriteAsset))
+                //    continue;
 
-                // TODO : Put a better name filter than just replacing pipes with underscores, try to match against textures with the same name when you remove character at index of pipe?
-                if (tempSpriteObject.name.Equals(spriteName)) // renderDataTexture.baseField["m_Name"].AsString.Replace("|", "_").Equals(tempSpriteObject.texture.name)
-                {
-                    validTextureSprites.Add(matchedSprite);
-                }
+                if (!tempSpriteObject.rect.Equals(spriteRect))
+                    continue;
+
+                finalSprites.Add(matchedSprite);
 
             }
 
-            //if (validTextureSprites.Count > 1)
-            //{
-            //    foreach (var matchedSprite in validTextureSprites)
-            //    {
-            //        string tempSpritePath = AssetDatabase.GUIDToAssetPath(matchedSprite);
-            //        var tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
-
-            //        if (ComparePhysicsShapes(tempSpriteObject, spriteAsset))
-            //            validPhysicsSprites.Add(matchedSprite);
-            //    }
-            //}
-
-            if (validTextureSprites.Count > 1)
+            if (finalSprites.Count != 0)
             {
-                foreach (var matchedSprite in validTextureSprites)
+                if (finalSprites.Count > 1)
                 {
-                    string tempSpritePath = AssetDatabase.GUIDToAssetPath(matchedSprite);
-                    var tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
-
-                    if (tempSpriteObject.rect.Equals(spriteRect))
-                        validRectSprites.Add(matchedSprite);
+                    Debug.LogWarning($"More than one sprite found for {spriteName} after filtering find a way to differentiate the following {finalSprites.Count} sprites {string.Join(", ", finalSprites.Select(g => Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(g))))}");
                 }
+
+                spriteGuid = finalSprites[0];
             }
-            
-
-            if (validTextureSprites.Count == 1)
-                spriteGuid = validTextureSprites[0];
-
-            //if (validPhysicsSprites.Count == 1)
-            //    spriteGuid = validPhysicsSprites[0];
-
-            if (validRectSprites.Count == 1)
-                spriteGuid = validRectSprites[0];
-
-            Debug.Log($"After filtering, sprites for {spriteName} is {Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(spriteGuid))} {validTextureSprites.Count} {validRectSprites.Count}");
+            else
+            {
+                Debug.LogError($"No sprite matched for {spriteName}");
+            }
 
         }
         else if (sprites.Length == 0)
@@ -257,6 +254,7 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
         return spriteGuid;
 
     }
+
 
     public bool ComparePhysicsShapes(Sprite sObject, AssetExternal spriteAsset)
     {
@@ -289,4 +287,28 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
         return true;
 
     }
+
+    private bool CompareTextureNames(string t1, string t2)
+    {
+
+        TextureNameInfo et1 = ExtractTextureNameInfo(t1);
+        TextureNameInfo et2 = ExtractTextureNameInfo(t2);
+
+        if (et1 == null  || et2 == null) return false;
+
+        if (!et1.name.Equals(et2.name)) return false;
+        if (!et1.index.Equals(et2.index)) return false;
+
+        // Should these two be considered? Or just log a warning?
+        if (!et1.resolution.Equals(et2.resolution)) return false;
+
+        if (!et1.format.Equals(et2.format)) return false;
+
+        if (!et1.hash.Equals(et2.hash))
+            Debug.LogWarning($"Sprite atlas textures have mismatching hashes. : {t1} {t2}");
+
+        return true;
+    }
+
+
 }

@@ -149,7 +149,7 @@ namespace AddressableReferencer.Editor.Analyzer {
                 return true;
             }
 
-            Debug.Log($"Type : id{assetExt.info.TypeId} {Enum.GetName(typeof(AssetClassID), assetExt.info.TypeId)}");
+            // Debug.Log($"Type : id{assetExt.info.TypeId} {Enum.GetName(typeof(AssetClassID), assetExt.info.TypeId)}");
 
             return (obj.GetType().Name == actualType && obj.name == assetExt.baseField["m_Name"].AsString);
 

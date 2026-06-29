@@ -87,7 +87,6 @@ namespace AddressableReferencer.Editor.Analyzer {
         public Config Settings { get; set; }
 
         private readonly Dictionary<long, ChildPPtrs> _immediateDeps = new();
-        private readonly Dictionary<long, ChildPPtrs> _GameObjectHierarchyDeps = new();
         private readonly Dictionary<long, ChildPPtrs> _bundleDeps = new();
 
         /// <summary>
@@ -199,13 +198,6 @@ namespace AddressableReferencer.Editor.Analyzer {
         /// <returns></returns>
         public ChildPPtrs FindChildGO(long assetPathId, bool recursive = false)
         {
-            if (_immediateDeps.TryGetValue(assetPathId, out ChildPPtrs cached))
-            {
-                Hits++;
-                return cached;
-            }
-
-            Misses++;
 
             AssetFileInfo info = _afileInst.file.GetAssetInfo(assetPathId);
             ChildPPtrs childPPtrs = ChildPPtrs.CreateNew();
@@ -214,13 +206,14 @@ namespace AddressableReferencer.Editor.Analyzer {
 
             foreach (AssetTypeValueField childVf in transformField["m_Children.Array"].Children)
             {
-                long childPptr = childVf["m_PathID"].AsLong;
+                AssetExternal childTransform = _mgr.GetExtAsset(_afileInst, 0, childVf["m_PathID"].AsLong);
+
+                long childPptr = childTransform.baseField["m_GameObject.m_PathID"].AsLong;
                 childPPtrs.InternalPaths.Add(childPptr);   
             }
 
             return childPPtrs;
 
         }
-    
     }
 }

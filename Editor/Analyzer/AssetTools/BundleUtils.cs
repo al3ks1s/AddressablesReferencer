@@ -1,3 +1,4 @@
+using UnityEngine;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using System;
@@ -115,7 +116,7 @@ namespace AddressableReferencer.Editor.Analyzer {
         public static AssetData GetTransform(this AssetsManager mgr, AssetsFileInstance afileInst, AssetFileInfo gameObjectInfo)
         {
             var goField = mgr.GetBaseField(afileInst, gameObjectInfo);
-            var transformAsset = mgr.GetExtAsset(afileInst, 0, goField["m_Component"][0]["component.m_PathId"].AsLong);
+            var transformAsset = mgr.GetExtAsset(afileInst, 0, goField["m_Component.Array"][0]["component.m_PathID"].AsLong);
             
             return new AssetData(transformAsset.info, transformAsset.baseField);
         }

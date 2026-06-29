@@ -86,6 +86,7 @@ public class BundleAnalyzer
     public string ResolveBundlePath(IResourceLocation bundle)
     {
         var bundlePath = bundle.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "");
+        
         return Path.Join(StreamingAssetsPath, bundlePath);
     }
 

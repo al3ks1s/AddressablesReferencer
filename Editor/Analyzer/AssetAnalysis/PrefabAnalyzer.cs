@@ -1,6 +1,7 @@
 using AssetsTools.NET.Extra;
 using Steamworks;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
@@ -32,13 +33,13 @@ namespace AddressableReferencer.Editor.Analyzer
 
             GameObject mainObject = AssetDatabase.LoadMainAssetAtPath(newPath) as GameObject;
 
-            mappings.AddRange(ProcessGameObject(newPath, mainObject, pathId));
+            mappings.AddRange(ProcessGameObject(mainObject, pathId));
 
             return (entry, mappings);
 
         }
 
-        private List<ObjectMapping> ProcessGameObject(string assetPath, GameObject currentGO, long pathId)
+        private List<ObjectMapping> ProcessGameObject(GameObject currentGO, long pathId)
         {
 
             List<ObjectMapping> objects = new List<ObjectMapping>();
@@ -49,7 +50,7 @@ namespace AddressableReferencer.Editor.Analyzer
 
             if (currentGO.GetComponentCount() != assetDeps.InternalPaths.Count)
             {
-                Debug.LogError($"Difference of component count for {assetPath} : {currentGO.GetType()} {currentGO.GetComponentCount()}/{assetDeps.InternalPaths.Count}");
+                Debug.LogError($"Difference of component count for {currentGO.name} {pathId} in bundle {Path.GetFileNameWithoutExtension(Location.InternalId)}, the components will not be referenced. Details: {currentGO.GetType()} {currentGO.GetComponentCount()}/{assetDeps.InternalPaths.Count}");
                 return objects;
             }
 
@@ -65,6 +66,22 @@ namespace AddressableReferencer.Editor.Analyzer
 
             }
 
+            var childGOs = deps.FindChildGO(pathId);
+
+            if (currentGO.transform.childCount == childGOs.InternalPaths.Count)
+            {
+                for (int i = 0; i < currentGO.transform.childCount; i++)
+                {
+                    // Debug.Log($"{currentGO.name} has this child {currentGO.transform.GetChild(i).gameObject.name} pathid:{childGOs.InternalPaths.ToList()[i]}");
+
+                    ProcessGameObject(currentGO.transform.GetChild(i).gameObject, childGOs.InternalPaths.ToList()[i]);
+
+                }
+            }
+            else
+            {
+                Debug.LogError($"Prefab Analysis for {currentGO.name} | {mainAsset.baseField["m_Name"].AsString} in bundle {Path.GetFileNameWithoutExtension(Location.InternalId)}: Theres a mismatching amount of child game objects between editor and bundle. Editor:{currentGO.transform.childCount} Bundle:{childGOs.InternalPaths.Count}");
+            }
 
             return objects;
         }
