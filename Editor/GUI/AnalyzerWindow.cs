@@ -1,49 +1,131 @@
-using Steamworks;
 using System.IO;
-using System.Threading.Tasks;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
-using UnityEngine.UIElements;
 
-public class AnalyzerWindow : EditorWindow
-{
+namespace AddressableReferencer.Editor.Analyzer { 
 
-    TextField text;
-
-    [MenuItem("Window/Asset Management/Addressable Referencer/Analyzer")]
-    public static void ShowAnalyzerWindow()
-    {
-        EditorWindow wnd = EditorWindow.GetWindow<AnalyzerWindow>();
-        wnd.titleContent = new GUIContent("Addressable Referencer - Analyze bundles");
-    }
-
-
-    public void CreateGUI()
+    public class AnalyzerWindow : EditorWindow
     {
 
-        var button = new Button();
-        button.text = "Test stuff";
+        string StreamingAssetFolder = "Enter the Streaming assets folder here";
+        string setupDangerZoneString = "Danger Zone - Setup utility, this will completely reset the generated addressable data and referencer setup";
+        bool activeDangerZone = false;
 
-        button.clicked += lesgo;
+        [MenuItem("Window/Asset Management/Addressable Referencer/Analyzer")]
+        public static void Open()
+        {
+            GetWindow<AnalyzerWindow>("Addressables Referencer - Analyzer");
+        }
 
-        text = new TextField("Enter StreamingAssets/aa path");
-        text.value = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Hollow Knight Silksong\\Hollow Knight Silksong_Data\\StreamingAssets\\aa";
+        public void OnEnable()
+        {
+            if (AddressableReferencerDefaultObject.SettingsExists)
+            {
+                if (!string.IsNullOrEmpty(AddressableReferencerDefaultObject.Settings.ExternalStreamingAssetsFolder))
+                    StreamingAssetFolder = AddressableReferencerDefaultObject.Settings.ExternalStreamingAssetsFolder;
+            }
+        }
 
-        rootVisualElement.Add(button);
-        rootVisualElement.Add(text);
+        public void OnGUI()
+        {
 
-    }
+            StreamingAssetFolder = EditorGUILayout.TextField(StreamingAssetFolder);
 
+            if (GUILayout.Button("Run stuff"))
+            {
+                lesgo();
+            }
 
-    public void lesgo()
-    {
+            if (GUILayout.Button("Test stuff"))
+            {
+                fastTest();
+            }
+
+            EditorGUILayout.Space(25);
+
+            if (GUILayout.Button("Clear reference Groups"))
+            {
+                ClearAddressableGroups();
+            }
+
+            EditorGUILayout.Space(25);
+
+            activeDangerZone = EditorGUILayout.BeginFoldoutHeaderGroup(activeDangerZone, setupDangerZoneString);
+
+            if (activeDangerZone) { 
+                if (GUILayout.Button("Setup stuff"))
+                {
+                    SetupPackage();
+                }
+            }
+
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
+        }
+
+        public void lesgo()
+        {
+
+            var so = AddressableReferencerDefaultObject.Settings;
+
+            AddressableReferencerDefaultObject.Settings.ExternalStreamingAssetsFolder = StreamingAssetFolder;
         
-        CatalogAnalyzer cat = new(text.value);
+            CatalogAnalyzer cat = new(AddressableReferencerDefaultObject.Settings.ExternalStreamingAssetsFolder);
 
-        // using (var scope = new AssetDatabase.AssetEditingScope()) { 
             cat.LoadCatalog(Path.Join(cat.StreamingAssetsPath, "catalog.bin"));
             cat.ProcessGroups();
-        // }
+
+        }
+
+        public void fastTest()
+        {
+
+        }
+
+        public void SetupPackage()
+        {
+            var settings = AddressableReferencerDefaultObject.Settings;
+
+            // Replace the build script
+            string BuildScriptPath = AddressableAssetSettingsDefaultObject.Settings.DataBuilderFolder + "/" + typeof(BuildScriptReferenceMode).Name + ".asset";
+
+            string guid = AssetDatabase.AssetPathToGUID(BuildScriptPath, AssetPathToGUIDOptions.OnlyExistingAssets);
+
+            if (!string.IsNullOrEmpty(guid))
+            {
+                var a = AssetDatabase.LoadAssetAtPath<BuildScriptReferenceMode>(BuildScriptPath);
+                var builderIndex = AddressableAssetSettingsDefaultObject.Settings.DataBuilders.IndexOf(a);
+
+                AddressableAssetSettingsDefaultObject.Settings.DataBuilders.RemoveAt(builderIndex);
+
+                AssetDatabase.DeleteAsset(BuildScriptPath);
+                AssetDatabase.SaveAssets();
+            }
+
+            BuildScriptReferenceMode.GetAsset();
+
+            // Clear out Addressable groups
+            ClearAddressableGroups();
+
+            activeDangerZone = false;
+
+        }
+
+        public void ClearAddressableGroups()
+        {
+
+            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
+            foreach (var group in groups.ToArray())
+            {
+                AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(group);
+            }
+
+        }
+
 
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Android;
 
 namespace UnityEditor.AddressableAssets.Build.DataBuilders
 {
@@ -17,6 +18,13 @@ namespace UnityEditor.AddressableAssets.Build.DataBuilders
         public override BuildScriptSchemaDriven CreateSchemaDrivenBuildScript()
         {
             return CreateInstance<BuildScriptReferenceSchemaDriven>();
+        }
+
+        public static BuildScriptReferenceMode GetAsset()
+        {
+            var asset = AddressableAssetSettingsDefaultObject.Settings.CreateScriptAsset<BuildScriptReferenceMode>();
+            AddressableAssetSettingsDefaultObject.Settings.DataBuilders.Add(asset);
+            return asset;
         }
 
 

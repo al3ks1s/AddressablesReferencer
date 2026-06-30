@@ -35,6 +35,17 @@ namespace AddressableReferencer.Editor.Analyzer {
 
         }
 
+        public static GenericAnalyzer GetAnalyzer(int assetType,  BundleAnalyzer parentAnalyzer)
+        {
+            return assetType switch
+            {
+                -1 => new FolderAnalyzer(parentAnalyzer),
+                (int)AssetClassID.SpriteAtlas => new SpriteAtlasAnalyzer(parentAnalyzer),
+                (int)AssetClassID.GameObject => new PrefabAnalyzer(parentAnalyzer),
+                _ => new GenericAnalyzer(parentAnalyzer)
+            };
+        }
+
         protected BundleAnalyzer m_parentAnalyzer;
 
         protected BundledAssetGroupSchema BundleSchema { get { return m_parentAnalyzer.schema; } }
@@ -63,10 +74,21 @@ namespace AddressableReferencer.Editor.Analyzer {
                 return (null, null);
             }
 
+            string assetType = assetExt.baseField.TypeName;
+
+            if (assetType == "MonoBehaviour")
+                assetType = AssetManager.GetExtAsset(MonoscriptFile, 0, assetExt.baseField["m_Script.m_PathID"].AsLong).baseField["m_ClassName"].AsString;
+
+            if (AssetDatabase.GetMainAssetTypeAtPath(newPath).Name != assetType && !IsSubAssetRepresentation(assetExt, assetPath))
+            {
+                // Debug.Log($"{assetPath} has mismatching types between editor and bundles, possible asset dependency detected. Editor:{AssetDatabase.GetMainAssetTypeAtPath(assetPath).Name} bundle:{assetExt.baseField.TypeName} Delegating to subAsset analyzer");
+
+                var subAnalyzer = new DependencyAnalyzer(m_parentAnalyzer);
+                return subAnalyzer.Analyze(pathId, assetPath);
+            }
+
             AddressableAssetEntry entry = CreateOrGetAssetEntry(assetGUID, newPath);
-
             var createdReference = CreateAssetReference(pathId, assetGUID, newPath);
-
 
             List<ObjectMapping> references = new();
 
@@ -88,7 +110,7 @@ namespace AddressableReferencer.Editor.Analyzer {
             var entry = AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(
                 assetGUID,
                 AssetGroup,
-                false,
+                true,
                 true
             );
 
@@ -108,8 +130,6 @@ namespace AddressableReferencer.Editor.Analyzer {
         {
 
             var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId);
-            
-            
 
             ObjectIdentifier obid = new();
             ObjectIdentifier[] assetRepresentations = ContentBuildInterface.GetPlayerAssetRepresentations(new GUID(assetGUID), EditorUserBuildSettings.activeBuildTarget);
@@ -128,12 +148,28 @@ namespace AddressableReferencer.Editor.Analyzer {
             if (obid.localIdentifierInFile != 0)
                 return new ObjectMapping(obid, pathId);
 
-            Debug.LogWarning($"Asset:{assetPath} of type {assetExt.baseField.TypeName} couldn't be matched to an asset representation.");
+            Debug.LogWarning($"Asset {assetPath} of type {assetExt.baseField.TypeName} couldn't be matched to an asset representation.");
             
             return null;
 
         }
-        
+
+        protected bool IsSubAssetRepresentation(AssetExternal assetExt, string assetPath)
+        {
+
+            var subObjects = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+            
+            foreach (var subObject in subObjects)
+            {
+                if (CheckAsset(subObject, assetExt))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         protected bool CheckAsset(UnityEngine.Object obj, AssetExternal assetExt)
         {
 

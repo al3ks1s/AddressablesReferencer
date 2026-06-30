@@ -138,7 +138,7 @@ public class SpriteAtlasBuilder : GenericBuilderT<SpriteAtlas>
                     if (!renderDataTexture.baseField["m_Name"].AsString.Replace("|", "_").Equals(tempSpriteObject.texture.name))
                         continue;
                 }
-
+                
                 if (!tempSpriteObject.name.Equals(spriteName))
                     continue;
 

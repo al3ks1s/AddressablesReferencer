@@ -9,12 +9,14 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.BuildReportVisualizer;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.U2D;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.U2D;
 using static UnityEditor.FilePathAttribute;
@@ -200,11 +202,12 @@ public class BundleAnalyzer
                 {
                     string path = asset["first"].AsString;
                     long pathId = asset["second.asset.m_PathID"].AsLong;
-                    var assetExt = mgr.GetExtAsset(CABFile, 0, pathId);
-                    
+                    var assetExt = mgr.GetExtAsset(CABFile, 0, pathId, true);
+
                     progressTracker.UpdateInfo($"({++counter}/{AssetCount}) - Processing: {Path.GetFileName(path)}");
 
-                    var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.baseField.TypeName, this);
+                    // var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.baseField.TypeName, this);
+                    var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.info.TypeId, this);
 
                     var kvp = analyzer.Analyze(pathId, path);
 

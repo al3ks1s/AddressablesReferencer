@@ -4,8 +4,9 @@
     "references": [
         "Unity.Addressables",
         "Unity.Addressables.Editor",
-        "Unity.ResourceManager",
-        "Unity.ScriptableBuildPipeline.Editor"
+        "Unity.ScriptableBuildPipeline",
+        "Unity.ScriptableBuildPipeline.Editor",
+        "Unity.ResourceManager"
     ],
     "includePlatforms": [
         "Editor"

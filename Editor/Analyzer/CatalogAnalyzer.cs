@@ -166,7 +166,7 @@ public class CatalogAnalyzer
             assetGroup = AddressableAssetSettingsDefaultObject.Settings.CreateGroup(
                 $"{name} (Reference)",
                 false,
-                false,
+                true,
                 true,
                 new() {
                         ScriptableObject.CreateInstance<AddressableReferenceSchema>(),
@@ -195,8 +195,15 @@ public class CatalogAnalyzer
         schema.IncludeAddressInCatalog = false;
         schema.IncludeLabelsInCatalog = false;
 
-        schema.UseAssetBundleCache = false;
-        schema.UseAssetBundleCrc = false;
+        schema.BuildPath.SetVariableByName(
+            AddressableAssetSettingsDefaultObject.Settings,
+            "Addressable References.BuildPath"
+        );
+        
+        schema.LoadPath.SetVariableByName(
+            AddressableAssetSettingsDefaultObject.Settings,
+            "Addressable References.LoadPath"
+        );
 
         return schema;
     }
