@@ -1,6 +1,5 @@
 using AddressableReferencer.Editor.Analyzer;
 using AssetsTools.NET.Extra;
-using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
@@ -39,7 +38,6 @@ public class DependencyAnalyzer : GenericAnalyzer
         {
             Debug.LogError($"Found too many possible assets for {assetExt.baseField["m_Name"].AsString} of type {assetExt.baseField.TypeName}. Using exact match on name, recheck in mapping window \n\n{string.Join("\n", possibleAssets)}");
             return (null, null);
-
         }
 
         if (possibleAssets.Count == 0)

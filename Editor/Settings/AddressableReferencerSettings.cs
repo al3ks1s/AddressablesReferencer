@@ -1,13 +1,13 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 
+[Serializable]
 public class AddressableReferencerSettings : ScriptableObject
 {
     
     public static AddressableReferencerSettings Create(string folder, string assetName)
     {
-
-        
 
         AddressableReferencerSettings ars = CreateInstance<AddressableReferencerSettings>();
         string assetPath = folder + "/" + assetName + ".asset";
@@ -23,6 +23,7 @@ public class AddressableReferencerSettings : ScriptableObject
         return ars;   
     }
 
+    [SerializeField]
     private string m_ExternalStreamingAssetsFolder;
 
     public string ExternalStreamingAssetsFolder
