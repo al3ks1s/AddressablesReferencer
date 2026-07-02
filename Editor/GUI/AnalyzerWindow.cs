@@ -100,7 +100,8 @@ namespace AddressableReferencer.Editor.Analyzer {
                 var a = AssetDatabase.LoadAssetAtPath<BuildScriptReferenceMode>(BuildScriptPath);
                 var builderIndex = AddressableAssetSettingsDefaultObject.Settings.DataBuilders.IndexOf(a);
 
-                AddressableAssetSettingsDefaultObject.Settings.DataBuilders.RemoveAt(builderIndex);
+                if (builderIndex < AddressableAssetSettingsDefaultObject.Settings.DataBuilders.Count && builderIndex >= 0)
+                    AddressableAssetSettingsDefaultObject.Settings.DataBuilders.RemoveAt(builderIndex);
 
                 AssetDatabase.DeleteAsset(BuildScriptPath);
                 AssetDatabase.SaveAssets();
@@ -110,6 +111,14 @@ namespace AddressableReferencer.Editor.Analyzer {
 
             // Clear out Addressable groups
             ClearAddressableGroups();
+
+            // Add the variables
+
+            if (!AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().Contains("Addressable References.BuildPath"))
+                AddressableAssetSettingsDefaultObject.Settings.profileSettings.CreateValue("Addressable References.BuildPath", "[UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]-Reference");
+            
+            if (!AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().Contains("Addressable References.LoadPath"))
+                AddressableAssetSettingsDefaultObject.Settings.profileSettings.CreateValue("Addressable References.LoadPath", "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]");
 
             activeDangerZone = false;
 
