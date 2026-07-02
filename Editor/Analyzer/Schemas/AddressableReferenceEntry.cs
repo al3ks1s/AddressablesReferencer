@@ -29,25 +29,24 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         public bool isDone = false;
 
 
-        public Dictionary<ObjectIdentifier, long> ObjectMappingDict
+        public Dictionary<(GUID, long, FileType, string), long> ObjectMappingDict
         {
-            get { 
-                if (m_ObjectMapping == null) 
+            get {
+                if (m_ObjectMapping == null)
                     m_ObjectMapping = new();
 
-                Dictionary<ObjectIdentifier, long> mapping = new();
+                Dictionary<(GUID, long, FileType, string), long> mapping = new();
 
-                foreach (var kvp in m_ObjectMapping)
+                foreach (var obmp in m_ObjectMapping)
                 {
-                    if (kvp.m_objectId != null)
-                        mapping.TryAdd(kvp.m_objectId, kvp.m_pathId);
+                    mapping.TryAdd((new GUID(obmp.m_GUID), obmp.m_LocalIdentifierInFile, obmp.m_FileType, obmp.m_FilePath), obmp.m_pathId);
                 }
 
-                return mapping; 
+                return mapping;
             }
         }
-
     }
+
 
     [Serializable]
     public class ObjectMapping
@@ -55,17 +54,31 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         public ObjectMapping(ObjectIdentifier obid, long pathId)
         {
-            m_objectId = obid;
+
+            m_GUID = obid.guid.ToString();
+            m_LocalIdentifierInFile = obid.localIdentifierInFile;
+            m_FilePath = obid.filePath;
+            m_FileType = obid.fileType;
+
             m_pathId = pathId;
         }
 
 
         [SerializeField]
-        public ObjectIdentifier m_objectId;
+        public string m_GUID;
+
+        [SerializeField]
+        public long m_LocalIdentifierInFile;
+
+        [SerializeField]
+        public FileType m_FileType;
+
+        [SerializeField]
+        public string m_FilePath;
 
         [SerializeField]
         public long m_pathId;
 
-    }
+    } 
 
 }

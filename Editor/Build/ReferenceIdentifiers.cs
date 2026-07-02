@@ -12,12 +12,12 @@ using UnityEngine;
 public class ReferenceIdentifier : IDeterministicIdentifiers
 {
 
-    private Dictionary<ObjectIdentifier, long> m_objectReferences;
+    private Dictionary<(GUID, long, FileType, string), long> m_objectReferences;
     private Dictionary<string, string> m_bundleReferences;
 
     private IDeterministicIdentifiers defaultIdentifier;
 
-    public ReferenceIdentifier(Dictionary<string, string> bundleReferences, Dictionary<ObjectIdentifier, long> objectReferences, bool contiguousBundles = false)
+    public ReferenceIdentifier(Dictionary<string, string> bundleReferences, Dictionary<(GUID, long, FileType, string), long> objectReferences, bool contiguousBundles = false)
     {
         m_bundleReferences = bundleReferences;
         m_objectReferences = objectReferences; 
@@ -36,7 +36,7 @@ public class ReferenceIdentifier : IDeterministicIdentifiers
     /// <inheritdoc />
     public virtual long SerializationIndexFromObjectIdentifier(ObjectIdentifier objectID)
     {
-        if (m_objectReferences.TryGetValue(objectID, out var serialIndex)) { 
+        if (m_objectReferences.TryGetValue((objectID.guid, objectID.localIdentifierInFile, objectID.fileType, objectID.filePath), out var serialIndex)) { 
             return serialIndex;
         }
         return defaultIdentifier.SerializationIndexFromObjectIdentifier(objectID);

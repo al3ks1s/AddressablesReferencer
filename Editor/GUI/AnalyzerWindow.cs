@@ -113,7 +113,6 @@ namespace AddressableReferencer.Editor.Analyzer {
             ClearAddressableGroups();
 
             // Add the variables
-
             if (!AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().Contains("Addressable References.BuildPath"))
                 AddressableAssetSettingsDefaultObject.Settings.profileSettings.CreateValue("Addressable References.BuildPath", "[UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]-Reference");
             

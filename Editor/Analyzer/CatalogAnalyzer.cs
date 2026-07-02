@@ -195,6 +195,9 @@ public class CatalogAnalyzer
         schema.IncludeAddressInCatalog = false;
         schema.IncludeLabelsInCatalog = false;
 
+        schema.UseAssetBundleCrc = false;
+        schema.UseAssetBundleCrcForCachedBundles = false;
+        
         schema.BuildPath.SetVariableByName(
             AddressableAssetSettingsDefaultObject.Settings,
             "Addressable References.BuildPath"

@@ -19,7 +19,7 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
 {
 
-    private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
+    private Dictionary<(GUID, long, FileType, string), long> m_objectReferences = new();
     private Dictionary<string, string> m_bundleReferences = new();
     private Dictionary<string, string> m_internalNameToBaseInternalId = new();
 
