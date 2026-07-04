@@ -29,8 +29,8 @@ public class FolderAnalyzer : GenericAnalyzer
             string path = asset["first"].AsString;
             long pathId = asset["second.asset.m_PathID"].AsLong;
 
-            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId);
-            var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.baseField.TypeName, m_parentAnalyzer);
+            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId, true);
+            var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.info.TypeId, m_parentAnalyzer);
             var kvp = analyzer.Analyze(pathId, path);
                        
             folderPath = getCommonPath(folderPath, path);

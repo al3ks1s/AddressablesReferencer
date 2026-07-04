@@ -83,6 +83,21 @@ namespace AddressableReferencer.Editor.Analyzer {
 
         public void fastTest()
         {
+            Debug.Log($"Testing");
+
+            var clip = AssetDatabase.LoadMainAssetAtPath("Assets/AnimationClip/GateOpen.anim") as AnimationClip;
+
+            var curvesRefBindings = AnimationUtility.GetObjectReferenceCurveBindings(clip);
+
+            foreach (var binding in curvesRefBindings)
+            {
+                var kframes = AnimationUtility.GetObjectReferenceCurve(clip, binding);
+                foreach (var kframe in kframes) {
+                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(kframe.value, out var guid, out var localid);
+
+                    Debug.Log($"Keyframe {kframe.value} {guid} {localid}");
+                }
+            }
 
         }
 

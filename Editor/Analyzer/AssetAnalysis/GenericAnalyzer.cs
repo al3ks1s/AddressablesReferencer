@@ -1,11 +1,9 @@
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
@@ -13,9 +11,6 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceLocations;
-using UnityEngine.U2D;
-using static UnityEditor.AddressableAssets.Build.Layout.BuildLayout;
-using static UnityEditor.FilePathAttribute;
 
 namespace AddressableReferencer.Editor.Analyzer {
 
@@ -42,6 +37,7 @@ namespace AddressableReferencer.Editor.Analyzer {
                 -1 => new FolderAnalyzer(parentAnalyzer),
                 (int)AssetClassID.SpriteAtlas => new SpriteAtlasAnalyzer(parentAnalyzer),
                 (int)AssetClassID.GameObject => new PrefabAnalyzer(parentAnalyzer),
+                (int)AssetClassID.AnimatorController => new AnimatorControllerAnalyzer(parentAnalyzer),
                 _ => new GenericAnalyzer(parentAnalyzer)
             };
         }
