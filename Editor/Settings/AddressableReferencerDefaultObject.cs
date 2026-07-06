@@ -1,5 +1,7 @@
 using System.IO;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
@@ -149,6 +151,51 @@ public class AddressableReferencerDefaultObject : ScriptableObject
         }
     }
     
+    public static void InitialSetup()
+    {
+        var settings = AddressableReferencerDefaultObject.Settings;
 
+        // Replace the build script
+        string BuildScriptPath = AddressableAssetSettingsDefaultObject.Settings.DataBuilderFolder + "/" + typeof(BuildScriptReferenceMode).Name + ".asset";
+        string guid = AssetDatabase.AssetPathToGUID(BuildScriptPath, AssetPathToGUIDOptions.OnlyExistingAssets);
+
+        if (!string.IsNullOrEmpty(guid))
+        {
+            var a = AssetDatabase.LoadAssetAtPath<BuildScriptReferenceMode>(BuildScriptPath);
+            var builderIndex = AddressableAssetSettingsDefaultObject.Settings.DataBuilders.IndexOf(a);
+
+            if (builderIndex < AddressableAssetSettingsDefaultObject.Settings.DataBuilders.Count && builderIndex >= 0)
+                AddressableAssetSettingsDefaultObject.Settings.DataBuilders.RemoveAt(builderIndex);
+
+            AssetDatabase.DeleteAsset(BuildScriptPath);
+            AssetDatabase.SaveAssets();
+        }
+
+        BuildScriptReferenceMode.GetAsset();
+
+        // Add the variables
+        if (!AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().Contains("Addressable References.BuildPath"))
+            AddressableAssetSettingsDefaultObject.Settings.profileSettings.CreateValue("Addressable References.BuildPath", "[UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]-Reference");
+
+        if (!AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().Contains("Addressable References.LoadPath"))
+            AddressableAssetSettingsDefaultObject.Settings.profileSettings.CreateValue("Addressable References.LoadPath", "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]");
+    }
+
+    public static void ClearSettings()
+    {
+        AddressableAssetSettingsDefaultObject.Settings.profileSettings.RemoveValue("Addressable References.BuildPath");
+        AddressableAssetSettingsDefaultObject.Settings.profileSettings.RemoveValue("Addressable References.LoadPath");
+
+        EditorBuildSettings.TryGetConfigObject<AddressableReferencerDefaultObject>(kDefaultSettingObjectName, out var so);
+
+        if (so == null)
+            return;
+
+        if (!AssetDatabase.GUIDToAssetPath(so.m_AddressableReferencerSettingsGuid).Equals(string.Empty))
+            AssetDatabase.DeleteAsset(AssetDatabase.GUIDToAssetPath(so.m_AddressableReferencerSettingsGuid));
+
+        EditorBuildSettings.RemoveConfigObject(kDefaultSettingObjectName);
+        AssetDatabase.DeleteAsset(kDefaultSettingFolder + "/DefaultObject.asset");
+    }
 
 }

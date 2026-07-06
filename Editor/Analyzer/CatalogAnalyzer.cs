@@ -10,6 +10,7 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 
@@ -24,6 +25,8 @@ public class CatalogAnalyzer
     public string StreamingAssetsPath { get; set; }
 
     internal IResourceLocator Locator { get; private set; }
+    AsyncOperationHandle<IResourceLocator> LocatorHandle;
+
     List<IResourceLocation> bundles;
 
     List<IResourceLocation> labelBundles;
@@ -34,24 +37,66 @@ public class CatalogAnalyzer
 
     List<(IResourceLocation, AddressableAssetGroup)> groupMapping = new();
 
-
-    public void LoadCatalog(string catalogPath)
+    public bool LoadCatalog(string catalogPath)
     {
+
+        if (StreamingAssetsPath.Equals(string.Empty))
+            return false;
+
         using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker()) {
 
             progressTracker.UpdateTask($"Loading the catalog");
 
-            Locator = Addressables.LoadContentCatalogAsync(catalogPath).WaitForCompletion();
+            LocatorHandle = Addressables.LoadContentCatalogAsync(catalogPath);
+            Locator = LocatorHandle.WaitForCompletion();
+            
             bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
             monoscript = bundles.Find(f => f.PrimaryKey.Contains("monoscripts"));
             unitybuiltins = bundles.Find(f => f.PrimaryKey.Contains("unitybuiltinassets"));
 
             IdentifyGroups();
         }
+
+        return true;
     }
     
+    public void UnloadCatalog()
+    {
+        Locator = null;
+        LocatorHandle.Release();
+    }
+
+    public string TryFindCatalog(string catalogName = "catalog.bin")
+    {
+
+        if (!Directory.Exists(StreamingAssetsPath))
+        {
+            StreamingAssetsPath = string.Empty;
+            return string.Empty;
+        }
+
+        foreach (string potentialCatalog in Directory.EnumerateFiles(StreamingAssetsPath, catalogName))
+        {
+            var catalogPath = Path.GetDirectoryName(potentialCatalog);
+
+            if (File.Exists(potentialCatalog)) {
+
+                if (!File.Exists(Path.Join(catalogPath, "catalog.hash")))
+                    Debug.LogWarning($"Catalog path was found at {potentialCatalog} but no companion hash file");
+
+                    return potentialCatalog;
+            }
+        }
+
+        return string.Empty;
+
+    }
+
     public void IdentifyGroups()
     {
+
+        groupMapping.Clear();
+
         List<IResourceLocation> assetBundles = bundles.Where(b => b.PrimaryKey.Contains("_assets_")).ToList();
 
         labelBundles = assetBundles.Where(b => b.PrimaryKey.Split("/").Last().Contains("_assets_")).ToList();
@@ -59,7 +104,7 @@ public class CatalogAnalyzer
 
         CreateLabelsAssetGroups();
         CreateSeparatelyPackedGroups();
-
+        
     }
 
     public void SaveReferenceSchemas()
@@ -169,10 +214,10 @@ public class CatalogAnalyzer
                 true,
                 true,
                 new() {
-                        ScriptableObject.CreateInstance<AddressableReferenceSchema>(),
-                        CreateBundleSchema(
-                            mode
-                        ),
+                    ScriptableObject.CreateInstance<AddressableReferenceSchema>(),
+                    CreateBundleSchema(
+                        mode
+                    ),
                 }
             );
         }

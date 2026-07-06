@@ -15,7 +15,7 @@ namespace AddressableReferencer.Editor.Analyzer {
         string setupDangerZoneString = "Danger Zone - Setup utility, this will completely reset the generated addressable data and referencer setup";
         bool activeDangerZone = false;
 
-        [MenuItem("Window/Asset Management/Addressable Referencer/Analyzer")]
+        // [MenuItem("Window/Asset Management/Addressable Referencer/Analyzer")]
         public static void Open()
         {
             GetWindow<AnalyzerWindow>("Addressables Referencer - Analyzer");

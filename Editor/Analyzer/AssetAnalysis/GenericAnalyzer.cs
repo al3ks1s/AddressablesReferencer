@@ -96,6 +96,7 @@ namespace AddressableReferencer.Editor.Analyzer {
 
         public virtual AddressableAssetEntry CreateOrGetAssetEntry(string assetGUID, string assetPath = null)
         {
+
             if (AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(assetGUID) != null)
             {
                 var oldEntry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(assetGUID);
@@ -140,6 +141,7 @@ namespace AddressableReferencer.Editor.Analyzer {
                 }
 
             }
+
 
             if (obid.localIdentifierInFile != 0)
                 return new ObjectMapping(obid, pathId);
