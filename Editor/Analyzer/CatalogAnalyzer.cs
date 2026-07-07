@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TMPro;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
@@ -31,6 +32,7 @@ public class CatalogAnalyzer
 
     List<IResourceLocation> labelBundles;
     List<IResourceLocation> separateBundles;
+    List<IResourceLocation> togetherBundles;
 
     IResourceLocation monoscript;
     IResourceLocation unitybuiltins;
@@ -49,10 +51,12 @@ public class CatalogAnalyzer
 
             LocatorHandle = Addressables.LoadContentCatalogAsync(catalogPath);
             Locator = LocatorHandle.WaitForCompletion();
-            
+                                                                                                                
             bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
             monoscript = bundles.Find(f => f.PrimaryKey.Contains("monoscripts"));
             unitybuiltins = bundles.Find(f => f.PrimaryKey.Contains("unitybuiltinassets"));
+
+            Debug.Log($"monoscript {monoscript == null}");
 
             IdentifyGroups();
         }
@@ -95,15 +99,71 @@ public class CatalogAnalyzer
     public void IdentifyGroups()
     {
 
+        /*
+         
+        Preprocess: 
+        - replace("/", "_")
+        - lookup and remove following regex : '_?[a-f0-9]{32}.bundle'
+        - Split("_") For sorting
+        - Split("_assets_") for group generation
+
+        Sorting rules:
+
+        - splitArray.size > 3 -> Packed Separately
+        - splitArray.size = 3
+            - label == "all" -> Packed together
+            - label == anything else (even empty string) -> Packed by label
+
+        - Default/Unknown -> Packed together 
+
+        */
+
         groupMapping.Clear();
+        labelBundles = new();
+        togetherBundles = new();
+        separateBundles = new();
 
-        List<IResourceLocation> assetBundles = bundles.Where(b => b.PrimaryKey.Contains("_assets_")).ToList();
+        var bundlesToProcess = bundles.Where(b =>
+        {
+            if (b.PrimaryKey.Contains("monoscripts") || b.PrimaryKey.Contains("unitybuiltinassets"))
+                return false;
 
-        labelBundles = assetBundles.Where(b => b.PrimaryKey.Split("/").Last().Contains("_assets_")).ToList();
-        separateBundles = assetBundles.Where(b => !b.PrimaryKey.Split("/").Last().Contains("_assets_")).ToList();
+            var pkArray = b.PrimaryKey.Split("_");
+            if (pkArray.Length < 2)
+                return true;
+
+            // Filter out the obvious scene bundles because those cannot be referenced.
+            return !pkArray[1].Equals("scenes");
+            
+        }).ToList();
+
+        foreach (var bundle in bundlesToProcess)
+        {
+            string primaryKey = bundle.PrimaryKey.ToString().Replace("/", "_");
+            primaryKey = Regex.Replace(primaryKey, "_?[0-9a-f]{32}.bundle", "");
+
+            string[] primaryKeyComponents = primaryKey.Split("_");
+            string[] primaryKeyGroupLabelComp = primaryKey.Split("_assets_");
+
+            if (primaryKeyComponents.Length == 1)
+                { togetherBundles.Add(bundle); continue; }
+
+            if (primaryKeyComponents.Length > 3)
+                { separateBundles.Add(bundle); continue; }
+
+            if (primaryKeyComponents.Length == 3 && primaryKeyGroupLabelComp.Last().Equals("all"))
+                { togetherBundles.Add(bundle); continue; }
+
+            if (primaryKeyComponents.Length == 3)
+                { labelBundles.Add(bundle); continue; }
+
+            togetherBundles.Add(bundle);
+
+        }
 
         CreateLabelsAssetGroups();
         CreateSeparatelyPackedGroups();
+        CreatePackedTogetherGroups();
         
     }
 
@@ -155,7 +215,7 @@ public class CatalogAnalyzer
         using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
         {
 
-            progressTracker.UpdateTask($"Creating folder groups");
+            progressTracker.UpdateTask($"Creating packed separately groups");
             HashSet<string> groups = separateBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
 
             foreach (var group in groups)
@@ -168,6 +228,22 @@ public class CatalogAnalyzer
                 {
                     groupMapping.Add((bun, assetGroup));
                 }
+            }
+        }
+    }
+
+    public void CreatePackedTogetherGroups()
+    {
+        using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+        {
+
+            progressTracker.UpdateTask($"Creating packed together groups");
+
+            foreach (var group in togetherBundles)
+            {
+                string groupName = group.PrimaryKey.Replace(".bundle", "").Split("_assets_").First();
+                var assetGroup = CreateOrGetGroup(groupName, BundledAssetGroupSchema.BundlePackingMode.PackTogether);
+                groupMapping.Add((group, assetGroup));
             }
         }
     }

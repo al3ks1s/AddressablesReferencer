@@ -88,8 +88,10 @@ public class BundleAnalyzer
     public string ResolveBundlePath(IResourceLocation bundle)
     {
         var bundlePath = bundle.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "");
-        
-        return Path.Join(StreamingAssetsPath, bundlePath);
+        bundlePath = Path.Join(StreamingAssetsPath, bundlePath);
+        bundlePath = Path.GetFullPath(bundlePath);
+
+        return bundlePath;
     }
 
     public BundleAnalyzer(IResourceLocation loc, AddressableAssetGroup grp, string streamingAssetPath, IResourceLocation monoscript = null)
@@ -141,7 +143,7 @@ public class BundleAnalyzer
 
     public void LoadMonoscript()
     {
-        monoscriptBundle = mgr.LoadBundleFile(ResolveBundlePath(monoscriptLocation));
+        monoscriptBundle = mgr.LoadBundleFile(ResolveBundlePath(monoscriptLocation)); 
         monoscriptFile = mgr.LoadAssetsFileFromBundle(monoscriptBundle, 0, false);
     }
 
