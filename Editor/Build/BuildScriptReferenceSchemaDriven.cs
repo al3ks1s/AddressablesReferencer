@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using AddressableReferencer.Editor.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,185 +13,239 @@ using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.ResourceManagement.ResourceLocations;
 
-public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
-{
+namespace AddressableReferencer.Editor.Build { 
 
-    private Dictionary<(GUID, long, FileType, string), long> m_objectReferences = new();
-    private Dictionary<string, string> m_bundleReferences = new();
-    private Dictionary<string, string> m_internalNameToBaseInternalId = new();
-
-    /// <inheritdoc />
-    private void AddInstanceAndSceneProvider(AddressableAssetsBuildContext aaContext)
-    {
-        aaContext.providerTypes.Add(instanceProviderType.Value);
-        aaContext.providerTypes.Add(sceneProviderType.Value);
-    }
-
-    /// <inheritdoc />
-    private TResult CreateErrorResult<TResult>(string errorString, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext) where TResult : IDataBuilderResult
-    {
-        BuildLayoutGenerationTask.GenerateErrorReport(errorString, aaContext, builderInput.PreviousContentState);
-        return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, errorString);
-    }
-
-    /// <inheritdoc />
-    protected override TResult DoBuild<TResult>(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext)
+    public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
     {
 
-        Debug.Log($"Built using reference mode");
-        
-        var genericResult = AddressableAssetBuildResult.CreateResult<TResult>();
-        AddressablesPlayerBuildResult addrResult = genericResult as AddressablesPlayerBuildResult;
+        private Dictionary<(GUID, long, FileType, string), long> m_objectReferences = new();
+        private Dictionary<string, string> m_bundleReferences = new();
+        private Dictionary<string, string> m_internalNameToBaseInternalId = new();
 
-        ExtractDataTask extractData = new ExtractDataTask();
-        List<CachedAssetState> carryOverCachedState = new List<CachedAssetState>();
-        if (!BuildUtility.CheckModifiedScenesAndAskToSave())
-            return CreateErrorResult<TResult>("Unsaved scenes", builderInput, aaContext);
-
-        AddInstanceAndSceneProvider(aaContext);
-
-        var contentCatalogs = new List<ContentCatalogData>();
-        BuildContext buildContext = new BuildContext(aaContext, Log, new ReferenceIdentifier(m_bundleReferences, m_objectReferences, aaContext.Settings.ContiguousBundles));
-        foreach (ISchemaBuilder schemaBuilder in SchemaBuilders)
+        /// <inheritdoc />
+        private void AddInstanceAndSceneProvider(AddressableAssetsBuildContext aaContext)
         {
-            schemaBuilder.Build(
-                buildContext,
-                builderInput,
-                aaContext,
-                extractData,
-                carryOverCachedState,
-                addrResult);
-
-            SwapOutLocations(aaContext, addrResult);
-
-            // Pre process the build result to edit the catalog using the reference locations
-            var schemaGeneratedCatalogs = schemaBuilder.GenerateCatalogs(builderInput, aaContext, addrResult);
-
-            foreach (var contentCatalog in schemaGeneratedCatalogs)
-            {
-                if (contentCatalog == null)
-                {
-                    Debug.Log($"No catalog generated for schema builder: {schemaBuilder.Name}");
-                    continue;
-                }
-                schemaBuilder.GenerateTypeStrippingInfo(builderInput, aaContext, contentCatalog);
-                schemaBuilder.GenerateContentUpdate(builderInput, aaContext, extractData, carryOverCachedState, addrResult);
-                contentCatalogs.Add(contentCatalog);
-            }
+            aaContext.providerTypes.Add(instanceProviderType.Value);
+            aaContext.providerTypes.Add(sceneProviderType.Value);
         }
-        // sort catalogs to be deterministic
-        aaContext.runtimeData.CatalogLocations.Sort((a, b) => string.Compare(a.InternalId, b.InternalId, StringComparison.Ordinal));
-        var settingsPath = GenerateRuntimeSettingsFile(aaContext, builderInput);
-        genericResult.LocationCount = aaContext.locations.Count;
-        genericResult.OutputPath = settingsPath;
 
-        GenerateBuildLayout(extractData.BuildContext, aaContext.internalToOutputBundleName, contentCatalogs.ToArray(), addrResult);
-        return genericResult;
-    
-    }
-
-    /// <inheritdoc />
-    private void GenerateBuildLayout(IBuildContext buildContext,
-    Dictionary<string, string> bundleRenameMap,
-    ContentCatalogData[] contentCatalogs,
-    AddressablesPlayerBuildResult buildResult)
-    {
-        if (ProjectConfigData.GenerateBuildLayout && buildContext != null)
+        /// <inheritdoc />
+        private TResult CreateErrorResult<TResult>(string errorString, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext) where TResult : IDataBuilderResult
         {
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            BuildLayoutGenerationTask.GenerateErrorReport(errorString, aaContext, builderInput.PreviousContentState);
+            return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, errorString);
+        }
+
+        /// <inheritdoc />
+        protected override TResult DoBuild<TResult>(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext)
+        {
+
+            // Mostly the same code as the parent class, no need to fix something that works
+       
+            var genericResult = AddressableAssetBuildResult.CreateResult<TResult>();
+            AddressablesPlayerBuildResult addrResult = genericResult as AddressablesPlayerBuildResult;
+
+            ExtractDataTask extractData = new ExtractDataTask();
+            List<CachedAssetState> carryOverCachedState = new List<CachedAssetState>();
+            if (!BuildUtility.CheckModifiedScenesAndAskToSave())
+                return CreateErrorResult<TResult>("Unsaved scenes", builderInput, aaContext);
+
+            AddInstanceAndSceneProvider(aaContext);
+
+            var contentCatalogs = new List<ContentCatalogData>();
+            BuildContext buildContext = new BuildContext(aaContext, Log, new ReferenceIdentifier(m_bundleReferences, m_objectReferences, aaContext.Settings.ContiguousBundles));
+            foreach (ISchemaBuilder schemaBuilder in SchemaBuilders)
             {
-                progressTracker.UpdateTask("Generating Build Layout");
-                using (Log.ScopedStep(LogLevel.Info, "Generate Build Layout"))
+                schemaBuilder.Build(
+                    buildContext,
+                    builderInput,
+                    aaContext,
+                    extractData,
+                    carryOverCachedState,
+                    addrResult);
+
+                SwapOutLocations(aaContext, addrResult);
+
+                // Pre process the build result to edit the catalog using the reference locations
+                var schemaGeneratedCatalogs = schemaBuilder.GenerateCatalogs(builderInput, aaContext, addrResult);
+
+                foreach (var contentCatalog in schemaGeneratedCatalogs)
                 {
-                    List<IBuildTask> tasks = new List<IBuildTask>();
-                    var buildLayoutTask = new BuildLayoutGenerationTask();
-                    buildContext.SetContextObject<IBuildLayoutParameters>(new BuildLayoutParameters(bundleRenameMap, contentCatalogs, buildResult));
-                    tasks.Add(buildLayoutTask);
-                    BuildTasksRunner.Run(tasks, buildContext);
+                    if (contentCatalog == null)
+                    {
+                        Debug.Log($"No catalog generated for schema builder: {schemaBuilder.Name}");
+                        continue;
+                    }
+                    schemaBuilder.GenerateTypeStrippingInfo(builderInput, aaContext, contentCatalog);
+                    schemaBuilder.GenerateContentUpdate(builderInput, aaContext, extractData, carryOverCachedState, addrResult);
+                    contentCatalogs.Add(contentCatalog);
+
+                    if (AddressableReferencerDefaultObject.Settings.MoveCatalogToSharedBundleBuildPath)
+                    {
+                        CopyCatalog(aaContext, contentCatalog, builderInput);
+                    }
                 }
             }
-        }
-    }
+            // sort catalogs to be deterministic
+            aaContext.runtimeData.CatalogLocations.Sort((a, b) => string.Compare(a.InternalId, b.InternalId, StringComparison.Ordinal));
+            var settingsPath = GenerateRuntimeSettingsFile(aaContext, builderInput);
+            genericResult.LocationCount = aaContext.locations.Count;
+            genericResult.OutputPath = settingsPath;
 
-    /// <inheritdoc />
-    protected override string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
-    {
-
-        // Debug.Log($"Processing schema of {assetGroup.Name}");
-
-        if (schema is AddressableReferenceSchema)
-        {
-            ProcessReferenceSchema(schema as AddressableReferenceSchema, assetGroup, aaContext);
-        } 
-        else 
-        { 
-
-            foreach (var schemaBuilder in SchemaBuilders)
-            {
-                if (!schemaBuilder.CanBuildSchema(schema))
-                    continue;
-                var errorString = schemaBuilder.ProcessGroupSchema(schema, assetGroup, aaContext);
-                if (errorString != string.Empty)
-                    return errorString;
-            }
-        } 
-        AssetDatabase.Refresh();
-        return string.Empty;
-    }
-
+            GenerateBuildLayout(extractData.BuildContext, aaContext.internalToOutputBundleName, contentCatalogs.ToArray(), addrResult);
+            return genericResult;
     
-    private string ProcessReferenceSchema(AddressableReferenceSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
-    {
+        }
 
-        BundledAssetGroupSchema bundleSchema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
-        
-        if (schema == null ||
-            bundleSchema == null ||
-            !schema.IsEnabled ||
-            !schema.ReferenceEnabled ||
-            !bundleSchema.IncludeInBuild || 
-            !bundleSchema.IsEnabled || 
-            !assetGroup.entries.Any())
+        /// <inheritdoc />
+        private void GenerateBuildLayout(IBuildContext buildContext,
+        Dictionary<string, string> bundleRenameMap,
+        ContentCatalogData[] contentCatalogs,
+        AddressablesPlayerBuildResult buildResult)
+        {
+            if (ProjectConfigData.GenerateBuildLayout && buildContext != null)
+            {
+                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+                {
+                    progressTracker.UpdateTask("Generating Build Layout");
+                    using (Log.ScopedStep(LogLevel.Info, "Generate Build Layout"))
+                    {
+                        List<IBuildTask> tasks = new List<IBuildTask>();
+                        var buildLayoutTask = new BuildLayoutGenerationTask();
+                        buildContext.SetContextObject<IBuildLayoutParameters>(new BuildLayoutParameters(bundleRenameMap, contentCatalogs, buildResult));
+                        tasks.Add(buildLayoutTask);
+                        BuildTasksRunner.Run(tasks, buildContext);
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc />
+        protected override string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
+        {
+
+            // Debug.Log($"Processing schema of {assetGroup.Name}");
+
+            if (schema is AddressableReferenceSchema)
+            {
+                ProcessReferenceSchema(schema as AddressableReferenceSchema, assetGroup, aaContext);
+            } 
+            else 
+            { 
+
+                foreach (var schemaBuilder in SchemaBuilders)
+                {
+                    if (!schemaBuilder.CanBuildSchema(schema))
+                        continue;
+                    var errorString = schemaBuilder.ProcessGroupSchema(schema, assetGroup, aaContext);
+                    if (errorString != string.Empty)
+                        return errorString;
+                }
+            } 
+            AssetDatabase.Refresh();
             return string.Empty;
+        }
         
-        // Debug.Log($"Processing schema for {assetGroup.Name}, has {schema.Entries.Count} entries");
-
-        foreach (var entry in schema.Entries)
+        private string ProcessReferenceSchema(AddressableReferenceSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
 
-            // Debug.Log($"Entry has {entry.ObjectMappingDict.Count} objects, Adding {entry.internalName} - {entry.cabName}");
-            m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
-            m_internalNameToBaseInternalId.TryAdd(entry.internalName, entry.baseInternalId);
+            BundledAssetGroupSchema bundleSchema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
+        
+            if (schema == null ||
+                bundleSchema == null ||
+                !schema.IsEnabled ||
+                !schema.ReferenceEnabled ||
+                !bundleSchema.IncludeInBuild || 
+                !bundleSchema.IsEnabled || 
+                !assetGroup.entries.Any())
+                return string.Empty;
+        
+            // Debug.Log($"Processing schema for {assetGroup.Name}, has {schema.Entries.Count} entries");
 
-            foreach (var map in entry.ObjectMappingDict)
+            foreach (var entry in schema.Entries)
             {
-                m_objectReferences.TryAdd(map.Key, map.Value);
+
+                // Debug.Log($"Entry has {entry.ObjectMappingDict.Count} objects, Adding {entry.internalName} - {entry.cabName}");
+                m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
+                m_internalNameToBaseInternalId.TryAdd(entry.internalName, entry.baseInternalId);
+
+                foreach (var map in entry.ObjectMappingDict)
+                {
+                    m_objectReferences.TryAdd(map.Key, map.Value);
+                }
+            }
+
+            return string.Empty;
+
+        }
+
+        private void SwapOutLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
+        {
+            foreach (var internalBundleName in aaContext.internalToOutputBundleName)
+            {
+                ContentCatalogDataEntry catalogEntry = aaContext.locations.Find(l => l.Keys[0].Equals(internalBundleName.Value));
+                
+                if (catalogEntry != null)
+                {
+                    if (m_internalNameToBaseInternalId.TryGetValue(internalBundleName.Key, out string baseLocationInternalId))
+                    {
+                        catalogEntry.InternalId = baseLocationInternalId;
+                    }
+                }
             }
         }
 
-        return string.Empty;
-
-    }
-
-    private void SwapOutLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
-    {
-        foreach (var internalBundleName in aaContext.internalToOutputBundleName)
+        private void CopyCatalog(AddressableAssetsBuildContext aaContext, ContentCatalogData catalogLocation, AddressablesDataBuilderInput builderInput)
         {
-            ContentCatalogDataEntry catalogEntry = aaContext.locations.Find(l => l.Keys[0].Equals(internalBundleName.Value));
-            // Debug.Log($"{internalBundleName.Key}, {internalBundleName.Value}");
 
-            if (catalogEntry != null)
+            string catalogPath = Path.GetFullPath(Path.Combine(Addressables.BuildPath, builderInput.RuntimeCatalogFilename));
+
+            if (File.Exists(catalogPath + ".bin"))
             {
-                // Debug.Log($"Generated Location {catalogEntry.Keys[0]}, {catalogEntry.InternalId} {catalogEntry.Dependencies.Count}");
-                if (m_internalNameToBaseInternalId.TryGetValue(internalBundleName.Key, out string baseLocationInternalId))
+
+                var sharedBundleGroup = aaContext.Settings.GetSharedBundleGroup();
+                var ContentPackingSettings = sharedBundleGroup.GetSchema<BundledAssetGroupSchema>();
+                var outputPath = Path.GetFullPath(Path.Join(ContentPackingSettings.BuildPath.GetValue(aaContext.Settings, false), builderInput.RuntimeCatalogFilename));
+
+                CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".bin", outputPath + ".bin");
+
+                if (File.Exists(catalogPath + ".hash")) 
                 {
-                    // Debug.Log($"Base Location {baseLocationInternalId}");
-                    catalogEntry.InternalId = baseLocationInternalId;
+                    CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".hash", outputPath + ".hash");
+                } 
+                else
+                { 
+                    Debug.LogWarning($"Catalog hash file couldn't be found at path {catalogPath}.hash"); 
                 }
+
+            } 
+            else
+            {
+                Debug.LogError($"Catalog file couldn't be found at path {catalogPath}.bin");
             }
+        }
+
+        static void CopyFileToDestinationWithTimestampIfDifferent(string srcPath, string destPath)
+        {
+            if (srcPath == destPath)
+                return;
+
+            DateTime time = File.GetLastWriteTime(srcPath);
+            DateTime destTime = File.Exists(destPath) ? File.GetLastWriteTime(destPath) : new DateTime();
+
+            if (destTime == time)
+                return;
+
+            var directory = Path.GetDirectoryName(destPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+            else if (File.Exists(destPath))
+                File.Delete(destPath);
+            File.Copy(srcPath, destPath);
+
         }
     }
 

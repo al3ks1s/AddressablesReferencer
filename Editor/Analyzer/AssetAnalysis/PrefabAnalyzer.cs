@@ -10,7 +10,7 @@ using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.U2D;
 
-namespace AddressableReferencer.Editor.Analyzer
+namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 {
     public class PrefabAnalyzer : GenericAnalyzerT<GameObject>
     {

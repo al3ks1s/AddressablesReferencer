@@ -1,4 +1,6 @@
-using AddressableReferencer.Editor.GUI;
+using AddressableReferencer.Editor.Analyzer;
+using AddressableReferencer.Editor.Build;
+using AddressableReferencer.Editor.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,12 +8,10 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
-using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace AddressableReferencer.Editor.GUI
 {
@@ -158,9 +158,13 @@ namespace AddressableReferencer.Editor.GUI
             {
                 var menu = new GenericMenu();
 
-                menu.AddItem(new GUIContent("Build Addressables bundles with referencer script"), false, BuildReferenceBundles);
-                menu.AddSeparator(string.Empty);
+                menu.AddItem(new GUIContent("Build Options/Move the catalog to the shared group build path.", "Will only affect the reference script."), Settings.MoveCatalogToSharedBundleBuildPath, () => {
+                    Settings.MoveCatalogToSharedBundleBuildPath = !Settings.MoveCatalogToSharedBundleBuildPath;
+                });
 
+                menu.AddSeparator(string.Empty);
+                menu.AddItem(new GUIContent("Build Addressables bundles with referencer script"), false, BuildReferenceBundles);
+                
                 menu.DropDown(gBuildRect);
             }
         }
@@ -316,7 +320,7 @@ namespace AddressableReferencer.Editor.GUI
 
             if (string.IsNullOrEmpty(guid))
                 return;
-
+            
             var a = AssetDatabase.LoadAssetAtPath<BuildScriptReferenceMode>(BuildScriptPath);
             var builderIndex = AddressableAssetSettingsDefaultObject.Settings.DataBuilders.IndexOf(a);
 

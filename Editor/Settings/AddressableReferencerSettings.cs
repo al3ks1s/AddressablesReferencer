@@ -2,33 +2,45 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-[Serializable]
-public class AddressableReferencerSettings : ScriptableObject
+namespace AddressableReferencer.Editor.Settings
 {
-    
-    public static AddressableReferencerSettings Create(string folder, string assetName)
+    [Serializable]
+    public class AddressableReferencerSettings : ScriptableObject
     {
 
-        AddressableReferencerSettings ars = CreateInstance<AddressableReferencerSettings>();
-        string assetPath = folder + "/" + assetName + ".asset";
+        public static AddressableReferencerSettings Create(string folder, string assetName)
+        {
 
-        if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(assetPath, AssetPathToGUIDOptions.OnlyExistingAssets)))
-            return AssetDatabase.LoadAssetAtPath<AddressableReferencerSettings>(assetPath);
+            AddressableReferencerSettings ars = CreateInstance<AddressableReferencerSettings>();
+            string assetPath = folder + "/" + assetName + ".asset";
 
-        AssetDatabase.CreateAsset(ars, assetPath);
-        ars = AssetDatabase.LoadAssetAtPath<AddressableReferencerSettings>(assetPath);
+            if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(assetPath, AssetPathToGUIDOptions.OnlyExistingAssets)))
+                return AssetDatabase.LoadAssetAtPath<AddressableReferencerSettings>(assetPath);
 
-        AssetDatabase.SaveAssets();
+            AssetDatabase.CreateAsset(ars, assetPath);
+            ars = AssetDatabase.LoadAssetAtPath<AddressableReferencerSettings>(assetPath);
 
-        return ars;   
-    }
+            AssetDatabase.SaveAssets();
 
-    [SerializeField]
-    private string m_ExternalStreamingAssetsFolder;
+            return ars;
+        }
 
-    public string ExternalStreamingAssetsFolder
-    {
-        get { return m_ExternalStreamingAssetsFolder; }
-        set { m_ExternalStreamingAssetsFolder = value; EditorUtility.SetDirty(this); }
+        [SerializeField]
+        private string m_ExternalStreamingAssetsFolder;
+
+        public string ExternalStreamingAssetsFolder
+        {
+            get { return m_ExternalStreamingAssetsFolder; }
+            set { m_ExternalStreamingAssetsFolder = value; EditorUtility.SetDirty(this); }
+        }
+
+        [SerializeField]
+        private bool m_MoveCatalogToSharedBundleBuildPath;
+
+        public bool MoveCatalogToSharedBundleBuildPath
+        {
+            get { return m_MoveCatalogToSharedBundleBuildPath; }
+            set { m_MoveCatalogToSharedBundleBuildPath = value; EditorUtility.SetDirty(this); }
+        }
     }
 }

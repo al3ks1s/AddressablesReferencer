@@ -1,7 +1,4 @@
-using AssetsTools.NET.Extra;
-using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
@@ -9,9 +6,8 @@ using UnityEditor.Build.Content;
 using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.U2D;
-using static UnityEditor.AddressableAssets.Build.Layout.BuildLayout;
 
-namespace AddressableReferencer.Editor.Analyzer
+namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 {
     public class SpriteAtlasAnalyzer : GenericAnalyzerT<SpriteAtlas>
     {

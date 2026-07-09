@@ -1,3 +1,5 @@
+using AddressableReferencer.Editor.Analyzer.AssetBuilder;
+using AddressableReferencer.Editor.Utilities;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using System;
@@ -12,7 +14,8 @@ using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceLocations;
 
-namespace AddressableReferencer.Editor.Analyzer {
+namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
+{
 
     public class GenericAnalyzer
     {
@@ -54,7 +57,8 @@ namespace AddressableReferencer.Editor.Analyzer {
         protected AssetFileInfo AssetBundle { get { return m_parentAnalyzer.assetBundle; } }
         protected int AssetCount { get { return m_parentAnalyzer.AssetCount; } }
         protected string[] Labels { get { return m_parentAnalyzer.Labels; } }
-        
+       
+
         public GenericAnalyzer(BundleAnalyzer parentAnalyzer)
         {
             m_parentAnalyzer = parentAnalyzer;

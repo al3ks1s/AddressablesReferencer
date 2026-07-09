@@ -6,7 +6,7 @@ using UnityEditor.Animations;
 using UnityEditor.Build.Content;
 using UnityEngine;
 
-namespace AddressableReferencer.Editor.Analyzer
+namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 {
     public class AnimatorControllerAnalyzer : GenericAnalyzerT<AnimatorController>
     {

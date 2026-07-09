@@ -1,3 +1,4 @@
+using AddressableReferencer.Editor.Settings;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -10,7 +11,7 @@ namespace AddressableReferencer.Editor.GUI {
         private static string kTreeViewPrefPrefixHeaders = nameof(AddressableReferencerMultiColumnHeader) + ".Headers";
 
         AddressableReferencerSettings m_Settings;
-
+        
         public AddressableReferencerMultiColumnHeader(MultiColumnHeaderState mchs) : this(mchs, AddressableReferencerDefaultObject.Settings) { }
 
         public AddressableReferencerMultiColumnHeader(MultiColumnHeaderState mchs, AddressableReferencerSettings settings) : base(mchs)
