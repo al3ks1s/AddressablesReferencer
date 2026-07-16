@@ -16,12 +16,16 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 
-namespace AddressableReferencer.Editor.Build { 
+namespace AddressableReferencer.Editor.Build {
 
+    /// <summary>
+    /// Schema-driven build script used by <see cref="BuildScriptReferenceMode"/>. Extends the implementation of the <see cref="BuildScriptPackedMode"/> 
+    /// build process to reference existing bundles.
+    /// </summary>
     public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
     {
-
-        private Dictionary<(GUID, long, FileType, string), long> m_objectReferences = new();
+        
+        private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
         private Dictionary<string, string> m_bundleReferences = new();
         private Dictionary<string, string> m_internalNameToBaseInternalId = new();
 
@@ -67,28 +71,37 @@ namespace AddressableReferencer.Editor.Build {
                     carryOverCachedState,
                     addrResult);
 
-                SwapOutLocations(aaContext, addrResult);
 
-                // Pre process the build result to edit the catalog using the reference locations
-                var schemaGeneratedCatalogs = schemaBuilder.GenerateCatalogs(builderInput, aaContext, addrResult);
-
-                foreach (var contentCatalog in schemaGeneratedCatalogs)
+                var targets = AddressableReferencerDefaultObject.Settings.BuildTargetsForCatalog;
+                targets.Add(EditorUserBuildSettings.activeBuildTarget);
+                
+                foreach (var target in targets)
                 {
-                    if (contentCatalog == null)
-                    {
-                        Debug.Log($"No catalog generated for schema builder: {schemaBuilder.Name}");
-                        continue;
-                    }
-                    schemaBuilder.GenerateTypeStrippingInfo(builderInput, aaContext, contentCatalog);
-                    schemaBuilder.GenerateContentUpdate(builderInput, aaContext, extractData, carryOverCachedState, addrResult);
-                    contentCatalogs.Add(contentCatalog);
+                    SwapOutLocationsForTarget(aaContext, addrResult, target);
 
-                    if (AddressableReferencerDefaultObject.Settings.MoveCatalogToSharedBundleBuildPath)
+                    // Pre process the build result to edit the catalog using the reference locations
+                    var schemaGeneratedCatalogs = schemaBuilder.GenerateCatalogs(builderInput, aaContext, addrResult);
+
+                    foreach (var contentCatalog in schemaGeneratedCatalogs)
                     {
-                        CopyCatalog(aaContext, contentCatalog, builderInput);
+                        if (contentCatalog == null)
+                        {
+                            Debug.Log($"No catalog generated for schema builder: {schemaBuilder.Name}");
+                            continue;
+                        }
+                        schemaBuilder.GenerateTypeStrippingInfo(builderInput, aaContext, contentCatalog);
+                        schemaBuilder.GenerateContentUpdate(builderInput, aaContext, extractData, carryOverCachedState, addrResult);
+                        contentCatalogs.Add(contentCatalog);
+
+                        if (AddressableReferencerDefaultObject.Settings.MoveCatalogToSharedBundleBuildPath)
+                        {
+                            CopyCatalog(aaContext, contentCatalog, builderInput, target);
+                        }
+    
                     }
                 }
             }
+
             // sort catalogs to be deterministic
             aaContext.runtimeData.CatalogLocations.Sort((a, b) => string.Compare(a.InternalId, b.InternalId, StringComparison.Ordinal));
             var settingsPath = GenerateRuntimeSettingsFile(aaContext, builderInput);
@@ -148,7 +161,6 @@ namespace AddressableReferencer.Editor.Build {
             AssetDatabase.Refresh();
             return string.Empty;
         }
-        
         private string ProcessReferenceSchema(AddressableReferenceSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
 
@@ -181,8 +193,8 @@ namespace AddressableReferencer.Editor.Build {
             return string.Empty;
 
         }
-
-        private void SwapOutLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
+        
+        private void SwapOutLocationsForTarget(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult, BuildTarget target = BuildTarget.NoTarget)
         {
             foreach (var internalBundleName in aaContext.internalToOutputBundleName)
             {
@@ -192,35 +204,38 @@ namespace AddressableReferencer.Editor.Build {
                 {
                     if (m_internalNameToBaseInternalId.TryGetValue(internalBundleName.Key, out string baseLocationInternalId))
                     {
-                        catalogEntry.InternalId = baseLocationInternalId;
+                        catalogEntry.InternalId = FormatBaseLocationForTarget(baseLocationInternalId, target);
                     }
                 }
             }
         }
-
-        private void CopyCatalog(AddressableAssetsBuildContext aaContext, ContentCatalogData catalogLocation, AddressablesDataBuilderInput builderInput)
+        private string FormatBaseLocationForTarget(string baseInternalId, BuildTarget target)
         {
-
+            return baseInternalId.Replace("{BuildTarget}", Enum.GetName(typeof(BuildTarget), target)).Replace('/', IResourceLocationExtension.PathSeparatorForPlatform(target));
+        }
+        private void CopyCatalog(AddressableAssetsBuildContext aaContext, ContentCatalogData catalogLocation, AddressablesDataBuilderInput builderInput, BuildTarget target = BuildTarget.NoTarget)
+        {
             string catalogPath = Path.GetFullPath(Path.Combine(Addressables.BuildPath, builderInput.RuntimeCatalogFilename));
+
+            var sharedBundleGroup = aaContext.Settings.GetSharedBundleGroup();
+            var ContentPackingSettings = sharedBundleGroup.GetSchema<BundledAssetGroupSchema>();
+            var outputPath = Path.GetFullPath(Path.Join(ContentPackingSettings.BuildPath.GetValue(aaContext.Settings, false), builderInput.RuntimeCatalogFilename));
+
+            if (ContentPackingSettings.BuildPath.GetName(aaContext.Settings).Equals("Local.BuildPath") ) //&& target == BuildTarget.NoTarget)
+                return;
 
             if (File.Exists(catalogPath + ".bin"))
             {
-
-                var sharedBundleGroup = aaContext.Settings.GetSharedBundleGroup();
-                var ContentPackingSettings = sharedBundleGroup.GetSchema<BundledAssetGroupSchema>();
-                var outputPath = Path.GetFullPath(Path.Join(ContentPackingSettings.BuildPath.GetValue(aaContext.Settings, false), builderInput.RuntimeCatalogFilename));
-
-                CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".bin", outputPath + ".bin");
+                CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".bin", outputPath + $"-{(target == BuildTarget.NoTarget ? string.Empty : Enum.GetName(typeof(BuildTarget), target))}" + ".bin");
 
                 if (File.Exists(catalogPath + ".hash")) 
                 {
-                    CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".hash", outputPath + ".hash");
+                    CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".hash", outputPath + $"-{(target == BuildTarget.NoTarget ? string.Empty : Enum.GetName(typeof(BuildTarget), target))}" + ".hash");
                 } 
                 else
                 { 
                     Debug.LogWarning($"Catalog hash file couldn't be found at path {catalogPath}.hash"); 
                 }
-
             } 
             else
             {

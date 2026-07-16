@@ -142,7 +142,8 @@ namespace AddressableReferencer.Editor.Analyzer
             }
 
             referenceEntry.cabName = CABFile.name;
-            referenceEntry.baseInternalId = location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
+            referenceEntry.baseInternalId = location.ReverseBundleInternalId();
+                // location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
 
         }
 

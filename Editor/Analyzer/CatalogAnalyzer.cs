@@ -141,6 +141,7 @@ namespace AddressableReferencer.Editor.Analyzer
 
             foreach (var bundle in bundlesToProcess)
             {
+
                 string primaryKey = bundle.PrimaryKey.ToString().Replace("/", "_");
                 primaryKey = Regex.Replace(primaryKey, "_?[0-9a-f]{32}.bundle", "");
 
@@ -261,7 +262,6 @@ namespace AddressableReferencer.Editor.Analyzer
             {
                 using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
                 {
-
                     progressTracker.UpdateTask($"({++counter}/{groupMapping.Count}) - Processing bundle : {Path.GetFileName(mapping.Item1.InternalId)}");
 
                     BundleAnalyzer ba = new BundleAnalyzer(
@@ -271,13 +271,9 @@ namespace AddressableReferencer.Editor.Analyzer
                         monoscript
                     );
                     ba.ProcessBundle();
-
                 }
-
             }
-
             SaveReferenceSchemas();
-
         }
 
         public static AddressableAssetGroup CreateOrGetGroup(string name, BundledAssetGroupSchema.BundlePackingMode mode)

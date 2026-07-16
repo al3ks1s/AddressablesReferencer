@@ -23,23 +23,29 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         [SerializeField]
         public List<ObjectMapping> m_ObjectMapping = new();
-        // public Dictionary<ObjectIdentifier, long> m_ObjectMapping;
 
         [SerializeField]
         public bool isDone = false;
 
-
-        public Dictionary<(GUID, long, FileType, string), long> ObjectMappingDict
+        public Dictionary<ObjectIdentifier, long> ObjectMappingDict
         {
-            get {
+            get
+            {
                 if (m_ObjectMapping == null)
                     m_ObjectMapping = new();
 
-                Dictionary<(GUID, long, FileType, string), long> mapping = new();
+                Dictionary<ObjectIdentifier, long > mapping = new();
 
                 foreach (var obmp in m_ObjectMapping)
                 {
-                    mapping.TryAdd((new GUID(obmp.m_GUID), obmp.m_LocalIdentifierInFile, obmp.m_FileType, obmp.m_FilePath), obmp.m_pathId);
+                    if (obmp.Overridden) 
+                    { 
+                        mapping.TryAdd(obmp.ObjectId, obmp.m_pathIdOverride); 
+                    } 
+                    else
+                    {
+                        mapping.TryAdd(obmp.ObjectId, obmp.m_pathId);
+                    }
                 }
 
                 return mapping;
@@ -79,6 +85,41 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         [SerializeField]
         public long m_pathId;
 
-    } 
+        [SerializeField]
+        public long m_pathIdOverride;
 
+        public bool Overridden
+        {
+            get { return m_pathIdOverride != 0; }
+        }
+
+        public void ResetOverride()
+        {
+            m_pathIdOverride = 0;
+        }
+
+        public ObjectIdentifier ObjectId
+        {
+            get
+            {
+                return CreateObjectIdentifier(m_GUID, m_LocalIdentifierInFile, m_FileType, m_FilePath);
+            }
+        }
+
+        public ObjectIdentifier CreateObjectIdentifier(string GUID, long localIdentifierInFile, FileType fileType, string filePath)
+        {
+
+            object boxed = new ObjectIdentifier();
+            System.Type obidT = typeof(ObjectIdentifier);
+
+            obidT.GetField("m_GUID", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(boxed, new GUID(GUID));
+            obidT.GetField("m_LocalIdentifierInFile", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(boxed, localIdentifierInFile);
+            obidT.GetField("m_FileType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(boxed, fileType);
+            obidT.GetField("m_FilePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(boxed, filePath);
+
+            return (ObjectIdentifier)boxed;
+
+        }
+
+    }
 }

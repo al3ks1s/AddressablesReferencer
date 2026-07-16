@@ -13,7 +13,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
     public class GenericBuilder
     {
 
-        public static GenericBuilder GetAnalyzer(string assetType, BundleAnalyzer parentAnalyzer)
+        public static GenericBuilder GetBuilder(string assetType, BundleAnalyzer parentAnalyzer)
         {
             return assetType switch
             {

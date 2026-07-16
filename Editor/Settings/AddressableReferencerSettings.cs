@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -25,22 +26,58 @@ namespace AddressableReferencer.Editor.Settings
             return ars;
         }
 
+
         [SerializeField]
         private string m_ExternalStreamingAssetsFolder;
-
         public string ExternalStreamingAssetsFolder
         {
             get { return m_ExternalStreamingAssetsFolder; }
             set { m_ExternalStreamingAssetsFolder = value; EditorUtility.SetDirty(this); }
         }
 
+
         [SerializeField]
         private bool m_MoveCatalogToSharedBundleBuildPath;
-
         public bool MoveCatalogToSharedBundleBuildPath
         {
             get { return m_MoveCatalogToSharedBundleBuildPath; }
             set { m_MoveCatalogToSharedBundleBuildPath = value; EditorUtility.SetDirty(this); }
+        }
+
+
+        [SerializeField]
+        private List<BuildTarget> m_buildTargetsForCatalog;
+        public List<BuildTarget> BuildTargetsForCatalog
+        {
+            get { 
+                if (m_buildTargetsForCatalog == null) 
+                    m_buildTargetsForCatalog = new List<BuildTarget>();
+
+                return m_buildTargetsForCatalog;
+            }
+        }
+        public bool IsBuildTargetActive(BuildTarget target)
+        {
+            return BuildTargetsForCatalog.Contains(target);
+        }
+        public void AddBuildTargetForCatalog(BuildTarget target)
+        {
+            if (!IsBuildTargetActive(target))
+                BuildTargetsForCatalog.Add(target);
+
+            EditorUtility.SetDirty(this);
+        }
+        public void RemoveBuildTargetForCatalog(BuildTarget target)
+        {
+            if (IsBuildTargetActive(target))
+                BuildTargetsForCatalog.Remove(target);
+
+            EditorUtility.SetDirty(this);
+        }
+        public void ClearBuildTargetForCatalogList()
+        {
+            BuildTargetsForCatalog.Clear();
+            EditorUtility.SetDirty(this);
         }
     }
 }

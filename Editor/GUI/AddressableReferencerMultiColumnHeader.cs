@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace AddressableReferencer.Editor.GUI { 
 
-    public class AddressableReferencerMultiColumnHeader :MultiColumnHeader
+    public class AddressableReferencerMultiColumnHeader : MultiColumnHeader
     {
 
         private static string kTreeViewPrefPrefixHeaders = nameof(AddressableReferencerMultiColumnHeader) + ".Headers";
@@ -34,7 +34,6 @@ namespace AddressableReferencer.Editor.GUI {
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),
                 new MultiColumnHeaderState.Column(),
-                new MultiColumnHeaderState.Column(),
             };
 
             int counter = 0;
@@ -54,15 +53,6 @@ namespace AddressableReferencer.Editor.GUI {
             retVal[counter].maxWidth = 10000;
             retVal[counter].headerTextAlignment = TextAlignment.Left;
             retVal[counter].canSort = true;
-            retVal[counter].autoResize = true;
-            counter++;
-
-            retVal[counter].headerContent = new GUIContent(EditorGUIUtility.FindTexture("FilterByType"), "Asset type");
-            retVal[counter].minWidth = 25;
-            retVal[counter].width = 25;
-            retVal[counter].maxWidth = 25;
-            retVal[counter].headerTextAlignment = TextAlignment.Left;
-            retVal[counter].canSort = false;
             retVal[counter].autoResize = true;
             counter++;
 

@@ -146,7 +146,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             }
 
-
             if (obid.localIdentifierInFile != 0)
                 return new ObjectMapping(obid, pathId);
 
@@ -279,7 +278,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
         /// <returns>Asset GUID</returns>
         protected string CreateMissingAsset(string assetType, string assetPath, long pathId)
         {
-            return GenericBuilder.GetAnalyzer(assetType, m_parentAnalyzer).CreateMissingAsset(pathId, assetPath);
+            return GenericBuilder.GetBuilder(assetType, m_parentAnalyzer).CreateMissingAsset(pathId, assetPath);
         }
 
     }
