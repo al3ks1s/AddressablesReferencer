@@ -1,6 +1,7 @@
 using AssetsTools.NET.Extra;
 using Steamworks;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -19,7 +20,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
         public override (AddressableAssetEntry, List<ObjectMapping>) Analyze(long pathId, string assetPath)
         {
-
             AddressableAssetEntry entry;
             List<ObjectMapping> mappings = new List<ObjectMapping>();
 
@@ -32,11 +32,9 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
             }
 
             GameObject mainObject = AssetDatabase.LoadMainAssetAtPath(newPath) as GameObject;
-
             mappings.AddRange(ProcessGameObject(mainObject, pathId));
 
             return (entry, mappings);
-
         }
 
         private List<ObjectMapping> ProcessGameObject(GameObject currentGO, long pathId)
@@ -61,8 +59,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
                 if (!(component.GetType() == typeof(Transform)))
                     objects.Add(new ObjectMapping(objectId, assetDeps.InternalPaths.ToList()[i]));
-    
-                // Debug.Log($"Prefab object at {assetPath} : {component.name} {component.GetType()} {objectId.guid} {objectId.localIdentifierInFile}");
 
             }
 
@@ -72,10 +68,10 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
             {
                 for (int i = 0; i < currentGO.transform.childCount; i++)
                 {
-                    // Debug.Log($"{currentGO.name} has this child {currentGO.transform.GetChild(i).gameObject.name} pathid:{childGOs.InternalPaths.ToList()[i]}");
-
-                    ProcessGameObject(currentGO.transform.GetChild(i).gameObject, childGOs.InternalPaths.ToList()[i]);
-
+                    ObjectIdentifier.TryGetObjectIdentifier(currentGO.transform.GetChild(i).gameObject, out var objectId);
+                    objects.Add(new ObjectMapping(objectId, childGOs.InternalPaths.ToList()[i]));
+                    
+                    objects.AddRange(ProcessGameObject(currentGO.transform.GetChild(i).gameObject, childGOs.InternalPaths.ToList()[i]));
                 }
             }
             else
