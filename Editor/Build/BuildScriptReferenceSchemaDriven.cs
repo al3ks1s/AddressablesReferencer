@@ -211,7 +211,7 @@ namespace AddressableReferencer.Editor.Build {
         }
         private string FormatBaseLocationForTarget(string baseInternalId, BuildTarget target)
         {
-            return baseInternalId.Replace("{BuildTarget}", Enum.GetName(typeof(BuildTarget), target)).Replace('/', IResourceLocationExtension.PathSeparatorForPlatform(target));
+            return baseInternalId.Replace("{BuildTarget}", Enum.GetName(typeof(BuildTarget), target));
         }
         private void CopyCatalog(AddressableAssetsBuildContext aaContext, ContentCatalogData catalogLocation, AddressablesDataBuilderInput builderInput, BuildTarget target = BuildTarget.NoTarget)
         {

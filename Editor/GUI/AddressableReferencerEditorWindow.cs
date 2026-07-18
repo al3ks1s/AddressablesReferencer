@@ -129,14 +129,14 @@ namespace AddressableReferencer.Editor.GUI
         }
         public void RunAnalysis()
         {
-            var gProcessor = new GUIContent("Run", "Run bundle analysis");
+            var gProcessor = new GUIContent("Run", "Run Bundle Analysis");
             var gProcessorRect = GUILayoutUtility.GetRect(gProcessor, EditorStyles.toolbarDropDown);
 
             if (EditorGUI.DropdownButton(gProcessorRect, gProcessor, FocusType.Passive, EditorStyles.toolbarDropDown))
             {
                 var menu = new GenericMenu();
 
-                menu.AddItem(new GUIContent("Run addressable bundles analysis"), false, Processbundles);
+                menu.AddItem(new GUIContent("Run Addressable Bundles Analysis"), false, Processbundles);
                 menu.AddSeparator(string.Empty);
 
                 menu.DropDown(gProcessorRect);
@@ -151,30 +151,30 @@ namespace AddressableReferencer.Editor.GUI
             {
                 var menu = new GenericMenu();
 
-                menu.AddItem(new GUIContent("Set StreamingAssets folder"), false, SelectStreamingAssetsPath);
-                menu.AddItem(new GUIContent("Replace assets"), false, ReplaceAssetReferences);
-                menu.AddItem(new GUIContent("Fast test stuff"), false, FastTest);
+                menu.AddItem(new GUIContent("Set StreamingAssets Folder"), false, SelectStreamingAssetsPath);
+                menu.AddItem(new GUIContent("Replace Assets"), false, ReplaceAssetReferences);
+                menu.AddItem(new GUIContent("Fast Test Stuff"), false, FastTest);
                 menu.AddSeparator(string.Empty);
 
-                menu.AddItem(new GUIContent("Reset Addressables Referencer settings"), false, ResetReferencerSetup);
+                menu.AddItem(new GUIContent("Reset Addressables Referencer Settings"), false, ResetReferencerSetup);
 
                 menu.DropDown(gToolsRect);
             }
         }
         public void BuildAddressableReferences()
         {
-            var gBuild = new GUIContent("Build", "Call the Referencer build script");
+            var gBuild = new GUIContent("Build", "Call the Referencer Build Script");
             var gBuildRect = GUILayoutUtility.GetRect(gBuild, EditorStyles.toolbarDropDown);
 
             if (EditorGUI.DropdownButton(gBuildRect, gBuild, FocusType.Passive, EditorStyles.toolbarDropDown))
             {
                 var menu = new GenericMenu();
 
-                menu.AddItem(new GUIContent("Build Options/Move the catalog to the shared group build path.", "Will only affect the reference script."), Settings.MoveCatalogToSharedBundleBuildPath, () => {
+                menu.AddItem(new GUIContent("Build Options/Copy The Catalog To The Shared Group Build Path", "Will only affect the reference script."), Settings.MoveCatalogToSharedBundleBuildPath, () => {
                     Settings.MoveCatalogToSharedBundleBuildPath = !Settings.MoveCatalogToSharedBundleBuildPath;
                 });
 
-                menu.AddItem(new GUIContent($"Build Options/Create a catalog for build target/Enable All", "Ensure the game you want to reference uses the build targets you select."), false, () => {
+                menu.AddItem(new GUIContent($"Build Options/Create a Catalog For Build Target/Enable All", "Ensure the game you want to reference uses the build targets you select."), false, () => {
                     foreach (var targetValue in Enum.GetValues(typeof(BuildTarget)))
                     {
                         if (BuildPipeline.IsBuildTargetSupported(EditorUserBuildSettings.selectedBuildTargetGroup, (BuildTarget)targetValue))
@@ -187,7 +187,7 @@ namespace AddressableReferencer.Editor.GUI
                 foreach (var targetValue in Enum.GetValues(typeof(BuildTarget)))
                 {
                     if (BuildPipeline.IsBuildTargetSupported(EditorUserBuildSettings.selectedBuildTargetGroup, (BuildTarget)targetValue)) { 
-                        menu.AddItem(new GUIContent($"Build Options/Create a catalog for build target/{Enum.GetName(typeof(BuildTarget), targetValue)}", "Ensure the game you want to reference uses the build targets you select."), Settings.IsBuildTargetActive((BuildTarget)targetValue), () => {
+                        menu.AddItem(new GUIContent($"Build Options/Create a Catalog For Build Target/{Enum.GetName(typeof(BuildTarget), targetValue)}", "Ensure the game you want to reference uses the build targets you select."), Settings.IsBuildTargetActive((BuildTarget)targetValue), () => {
                             if (Settings.IsBuildTargetActive((BuildTarget)targetValue))
                             {
                                 Settings.RemoveBuildTargetForCatalog((BuildTarget)targetValue);
@@ -200,13 +200,13 @@ namespace AddressableReferencer.Editor.GUI
                     }
                 }
 
-                menu.AddItem(new GUIContent($"Build Options/Create a catalog for build target/Disable All", "Ensure the game you want to reference uses the build targets you select."), false, () => {
+                menu.AddItem(new GUIContent($"Build Options/Create a Catalog For Build Target/Disable All", "Ensure the game you want to reference uses the build targets you select."), false, () => {
                     Settings.ClearBuildTargetForCatalogList();
                 });
 
                 menu.AddSeparator(string.Empty);
                 menu.AddSeparator(string.Empty);
-                menu.AddItem(new GUIContent("Build Addressables bundles with referencer script"), false, BuildReferenceBundles);
+                menu.AddItem(new GUIContent("Build Addressables Bundles With Referencer Script"), false, BuildReferenceBundles);
                 
                 menu.DropDown(gBuildRect);
             }
@@ -286,7 +286,7 @@ namespace AddressableReferencer.Editor.GUI
             m_entryTree.Repaint();
         }
 
-        // Testing
+
         private void FastTest()
         {
             Debug.Log($"");
