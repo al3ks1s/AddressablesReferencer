@@ -19,7 +19,7 @@ public static class IResourceLocationExtension
         {
             if (internalId.Contains(Enum.GetName(typeof(BuildTarget), (BuildTarget)target)))
             {
-                internalId = internalId.Replace(Enum.GetName(typeof(BuildTarget), (BuildTarget)target), "{BuildTarget}").Replace("\\", "/");
+                internalId = internalId.Replace(Enum.GetName(typeof(BuildTarget), (BuildTarget)target), "{BuildTarget}");
             }
         }
         
