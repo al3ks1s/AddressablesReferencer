@@ -13,6 +13,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
     {
 
         [SerializeField]
+        public string primaryKey;
+
+        [SerializeField]
         public string internalName;
 
         [SerializeField]

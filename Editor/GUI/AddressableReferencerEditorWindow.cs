@@ -289,15 +289,7 @@ namespace AddressableReferencer.Editor.GUI
 
         private void FastTest()
         {
-            Debug.Log($"{Path.GetFileName("{UnityEngine.AddressableAssets.Addressables.RuntimePath}\\StandaloneWindows64\\atlases_assets_assets/sprites/_atlases/core_glows.spriteatlas.bundle")}");
-            Debug.Log($"{Path.GetFileName("{UnityEngine.AddressableAssets.Addressables.RuntimePath}/StandaloneOSX/atlases_assets_assets/sprites/_atlases/core_glows.spriteatlas.bundle")}");
-            Debug.Log($"{Path.GetFileName("{UnityEngine.AddressableAssets.Addressables.RuntimePath}\\StandaloneWindows64\\atlases_assets_assets/sprites/_atlases/core_glows.spriteatlas.bundle")}");
-            Debug.Log($"{Path.GetFileName("C:/Program Files (x86)/Steam/steamapps/common/Hollow Knight Silksong/Hollow Knight Silksong_Data/StreamingAssets/aa\\StandaloneWindows64\\atlases_assets_assets/sprites/_atlases/core_glows.spriteatlas.bundle")}");
-
-            Debug.Log($"{Path.GetFileName("C:/Program Files (x86)/Steam/steamapps/common/Hollow Knight Silksong/Hollow Knight Silksong_Data/StreamingAssets/aa\\StandaloneWindows64\\sfxstatic_assets_areaorgan.bundle")}");
-            Debug.Log($"{Path.GetFileName("{UnityEngine.AddressableAssets.Addressables.RuntimePath}/StandaloneOSX/sfxstatic_assets_areaorgan.bundle")}");
-            Debug.Log($"{Path.GetFileName("{UnityEngine.AddressableAssets.Addressables.RuntimePath}\\StandaloneWindows64\\sfxstatic_assets_areaorgan.bundle")}");
-    }
+        }
 
 
         // Processing

@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
@@ -15,6 +17,7 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceLocations;
 
 namespace AddressableReferencer.Editor.Build {
 
@@ -27,7 +30,7 @@ namespace AddressableReferencer.Editor.Build {
         
         private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
         private Dictionary<string, string> m_bundleReferences = new();
-        private Dictionary<string, string> m_internalNameToBaseInternalId = new();
+        private Dictionary<string, AddressableReferenceEntry> m_internalNameToReferenceEntry = new();
 
         /// <inheritdoc />
         private void AddInstanceAndSceneProvider(AddressableAssetsBuildContext aaContext)
@@ -182,7 +185,7 @@ namespace AddressableReferencer.Editor.Build {
 
                 // Debug.Log($"Entry has {entry.ObjectMappingDict.Count} objects, Adding {entry.internalName} - {entry.cabName}");
                 m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
-                m_internalNameToBaseInternalId.TryAdd(entry.internalName, entry.baseInternalId);
+                m_internalNameToReferenceEntry.TryAdd(entry.internalName, entry);
 
                 foreach (var map in entry.ObjectMappingDict)
                 {
@@ -198,21 +201,35 @@ namespace AddressableReferencer.Editor.Build {
         {
             foreach (var internalBundleName in aaContext.internalToOutputBundleName)
             {
+
                 ContentCatalogDataEntry catalogEntry = aaContext.locations.Find(l => l.Keys[0].Equals(internalBundleName.Value));
-                
+
                 if (catalogEntry != null)
                 {
-                    if (m_internalNameToBaseInternalId.TryGetValue(internalBundleName.Key, out string baseLocationInternalId))
+                    if (m_internalNameToReferenceEntry.TryGetValue(internalBundleName.Key, out AddressableReferenceEntry baseLocation))
                     {
-                        catalogEntry.InternalId = FormatBaseLocationForTarget(baseLocationInternalId, target);
+                        catalogEntry.InternalId = FormatBaseLocationForTarget(baseLocation, target);
                     }
                 }
             }
         }
-        private string FormatBaseLocationForTarget(string baseInternalId, BuildTarget target)
+        private string FormatBaseLocationForTarget(AddressableReferenceEntry baseLocation, BuildTarget target)
         {
-            return baseInternalId.Replace("{BuildTarget}", Enum.GetName(typeof(BuildTarget), target));
+
+            string internalId = baseLocation.baseInternalId.Replace("{BuildTarget}", Enum.GetName(typeof(BuildTarget), target)).Replace('/', IResourceLocationExtension.PathSeparatorForPlatform(target));
+
+            // Path handling for windows targets, the slashes of the primary key musn't be replaced by backslashes
+            if (IResourceLocationExtension.PathSeparatorForPlatform(target) == '\\') 
+            {
+                string pk = Regex.Replace(baseLocation.primaryKey, "_?[0-9a-f]{32}.bundle", "");
+                string bpk = pk.Replace("/", "\\");
+
+                internalId = internalId.Replace(bpk, pk);
+            }
+
+            return internalId;
         }
+
         private void CopyCatalog(AddressableAssetsBuildContext aaContext, ContentCatalogData catalogLocation, AddressablesDataBuilderInput builderInput, BuildTarget target = BuildTarget.NoTarget)
         {
             string catalogPath = Path.GetFullPath(Path.Combine(Addressables.BuildPath, builderInput.RuntimeCatalogFilename));
