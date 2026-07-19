@@ -10,6 +10,7 @@ using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Build.Content;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -81,7 +82,6 @@ namespace AddressableReferencer.Editor.GUI
             m_SearchField = new SearchField();
         
         }
-
         public void OnGUI()
         {
             if (m_entryTree == null)
@@ -169,6 +169,10 @@ namespace AddressableReferencer.Editor.GUI
             if (EditorGUI.DropdownButton(gBuildRect, gBuild, FocusType.Passive, EditorStyles.toolbarDropDown))
             {
                 var menu = new GenericMenu();
+
+                menu.AddItem(new GUIContent("Build Options/Use Base Game Built-ins Asset Bundle"), Settings.UseBaseGameBuiltinAssets, () => {
+                    Settings.UseBaseGameBuiltinAssets = !Settings.UseBaseGameBuiltinAssets;
+                });
 
                 menu.AddItem(new GUIContent("Build Options/Copy The Catalog To The Shared Group Build Path", "Will only affect the reference script."), Settings.MoveCatalogToSharedBundleBuildPath, () => {
                     Settings.MoveCatalogToSharedBundleBuildPath = !Settings.MoveCatalogToSharedBundleBuildPath;
@@ -277,7 +281,6 @@ namespace AddressableReferencer.Editor.GUI
 
             return null;
         }
-
         private void toggleHierarchicalSearch()
         {
             ProjectConfigData.HierarchicalSearch = !ProjectConfigData.HierarchicalSearch;
@@ -285,12 +288,17 @@ namespace AddressableReferencer.Editor.GUI
             m_entryTree.Reload();
             m_entryTree.Repaint();
         }
-
-
+        
+        
         private void FastTest()
         {
-        }
+            var assets = AssetDatabase.LoadAllAssetsAtPath("Resources/unity_builtin_extra");
 
+            foreach (var asset in assets)
+            {
+                Debug.Log($"{asset.name} {asset.GetType()}");
+            }
+        }
 
         // Processing
         private void SelectStreamingAssetsPath()
@@ -360,7 +368,8 @@ namespace AddressableReferencer.Editor.GUI
 
             // Should this be done every time?
             m_analyzer.IdentifyGroups();
-            m_analyzer.ProcessGroups();
+            m_analyzer.ProcessBuiltInBundle();
+            // m_analyzer.ProcessGroups();
 
             m_entryTree.Reload();
 

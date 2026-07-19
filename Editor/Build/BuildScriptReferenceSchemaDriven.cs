@@ -18,6 +18,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using static UnityEngine.EventSystems.EventTrigger;
 
 namespace AddressableReferencer.Editor.Build {
 
@@ -62,6 +63,9 @@ namespace AddressableReferencer.Editor.Build {
 
             AddInstanceAndSceneProvider(aaContext);
 
+            // Special treatment for the unity builtins
+            ProcessBuiltInBundle(aaContext);
+
             var contentCatalogs = new List<ContentCatalogData>();
             BuildContext buildContext = new BuildContext(aaContext, Log, new ReferenceIdentifier(m_bundleReferences, m_objectReferences, aaContext.Settings.ContiguousBundles));
             foreach (ISchemaBuilder schemaBuilder in SchemaBuilders)
@@ -74,10 +78,13 @@ namespace AddressableReferencer.Editor.Build {
                     carryOverCachedState,
                     addrResult);
 
-
                 var targets = AddressableReferencerDefaultObject.Settings.BuildTargetsForCatalog;
-                targets.Add(EditorUserBuildSettings.activeBuildTarget);
-                
+                if (targets.Last() != EditorUserBuildSettings.activeBuildTarget)
+                {
+                    targets.Remove(EditorUserBuildSettings.activeBuildTarget);
+                    targets.Add(EditorUserBuildSettings.activeBuildTarget);
+                }
+
                 foreach (var target in targets)
                 {
                     SwapOutLocationsForTarget(aaContext, addrResult, target);
@@ -104,6 +111,9 @@ namespace AddressableReferencer.Editor.Build {
                     }
                 }
             }
+
+            //if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
+            //    RemoveBuiltInAssetBundle(addrResult);
 
             // sort catalogs to be deterministic
             aaContext.runtimeData.CatalogLocations.Sort((a, b) => string.Compare(a.InternalId, b.InternalId, StringComparison.Ordinal));
@@ -196,7 +206,23 @@ namespace AddressableReferencer.Editor.Build {
             return string.Empty;
 
         }
-        
+        private void ProcessBuiltInBundle(AddressableAssetsBuildContext aaContext)
+        {
+            if (!AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
+                return;
+
+            var entry = AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry;
+            entry.internalName = GetBuiltInBundleNamePrefix(aaContext) + $"{BuildScriptBase.BuiltInBundleBaseName}.bundle";
+            AddressableReferencerDefaultObject.Settings.Save();
+
+            m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
+
+            foreach (var map in entry.ObjectMappingDict)
+            {
+                m_objectReferences.TryAdd(map.Key, map.Value);
+            }
+        }
+
         private void SwapOutLocationsForTarget(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult, BuildTarget target = BuildTarget.NoTarget)
         {
             foreach (var internalBundleName in aaContext.internalToOutputBundleName)
@@ -210,6 +236,18 @@ namespace AddressableReferencer.Editor.Build {
                     {
                         catalogEntry.InternalId = FormatBaseLocationForTarget(baseLocation, target);
                     }
+                }
+            }
+
+            if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
+            {
+                var bundleResult = addrResult.AssetBundleBuildResults.Find(br => Regex.IsMatch(br.InternalBundleName, "[0-9a-f]{32}_unitybuiltinasset"));
+                string bundleFileName = Path.GetFileName(bundleResult.FilePath).Replace(".bundle", "");
+                var builtinsLocation = aaContext.locations.Find(l => l.Keys[0].ToString().Contains(bundleFileName));
+
+                if (builtinsLocation != null)
+                {
+                    builtinsLocation.InternalId = FormatBaseLocationForTarget(AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry, target);
                 }
             }
         }
@@ -229,6 +267,7 @@ namespace AddressableReferencer.Editor.Build {
 
             return internalId;
         }
+
 
         private void CopyCatalog(AddressableAssetsBuildContext aaContext, ContentCatalogData catalogLocation, AddressablesDataBuilderInput builderInput, BuildTarget target = BuildTarget.NoTarget)
         {
@@ -259,7 +298,6 @@ namespace AddressableReferencer.Editor.Build {
                 Debug.LogError($"Catalog file couldn't be found at path {catalogPath}.bin");
             }
         }
-
         static void CopyFileToDestinationWithTimestampIfDifferent(string srcPath, string destPath)
         {
             if (srcPath == destPath)
@@ -279,6 +317,47 @@ namespace AddressableReferencer.Editor.Build {
             File.Copy(srcPath, destPath);
 
         }
+
+        private void RemoveBuiltInAssetBundle(AddressablesPlayerBuildResult addrResult)
+        {
+            var bundleResult = addrResult.AssetBundleBuildResults.Find(br => Regex.IsMatch(br.InternalBundleName, "[0-9a-f]{32}_unitybuiltinasset"));
+
+            Debug.Log(bundleResult.FilePath.ToString());
+
+            if (File.Exists(bundleResult.FilePath))
+            {
+                File.Delete(bundleResult.FilePath);
+            }
+                
+        }
+
+        internal static string GetBuiltInBundleNamePrefix(AddressableAssetsBuildContext aaContext)
+        {
+            return GetBuiltInBundleNamePrefix(aaContext.Settings);
+        }
+        internal static string GetBuiltInBundleNamePrefix(AddressableAssetSettings settings)
+        {
+            string value = "";
+            switch (settings.BuiltInBundleNaming)
+            {
+                case BuiltInBundleNaming.DefaultGroupGuid:
+                    value = settings.DefaultGroup.Guid;
+                    break;
+                case BuiltInBundleNaming.ProjectName:
+                    value = UnityEngine.Hash128.Compute(GetProjectName()).ToString();
+                    break;
+                case BuiltInBundleNaming.Custom:
+                    value = settings.BuiltInBundleCustomNaming;
+                    break;
+            }
+
+            return value;
+        }
+        internal static string GetProjectName()
+        {
+            return new DirectoryInfo(Path.GetDirectoryName(Application.dataPath)).Name;
+        }
+
     }
 
 }

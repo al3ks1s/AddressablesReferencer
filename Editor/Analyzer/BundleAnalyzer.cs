@@ -1,5 +1,5 @@
-using AddressableReferencer.Editor.Analyzer;
 using AddressableReferencer.Editor.Analyzer.AssetAnalysis;
+using AddressableReferencer.Editor.Settings;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using System;
@@ -9,18 +9,14 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
-using UnityEditor.AddressableAssets;
-using UnityEditor.AddressableAssets.BuildReportVisualizer;
+using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline.Utilities;
-using UnityEditor.U2D;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.ResourceLocations;
-using UnityEngine.U2D;
-using static UnityEditor.FilePathAttribute;
 
 namespace AddressableReferencer.Editor.Analyzer
 {
@@ -147,7 +143,6 @@ namespace AddressableReferencer.Editor.Analyzer
                 // location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
 
         }
-
         public void LoadMonoscript()
         {
             monoscriptBundle = mgr.LoadBundleFile(ResolveBundlePath(monoscriptLocation));
@@ -183,7 +178,6 @@ namespace AddressableReferencer.Editor.Analyzer
             rfa.Dispose();
 
         }
-
         public void AnalyzeAssets()
         {
             using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
@@ -268,7 +262,6 @@ namespace AddressableReferencer.Editor.Analyzer
             referenceEntry.internalName = hashedBundleName;
 
         }
-
         internal static string CalculateGroupHash(BundledAssetGroupSchema.BundleInternalIdMode mode, AddressableAssetGroup assetGroup, IEnumerable<AddressableAssetEntry> entries)
         {
             switch (mode)
@@ -284,5 +277,134 @@ namespace AddressableReferencer.Editor.Analyzer
             throw new Exception("Invalid naming mode.");
         }
 
+    }
+
+    public class BuiltInBundleAnalyzer
+    {
+
+        //var assets = AssetDatabase.LoadAllAssetsAtPath("Resources/unity_builtin_extra");
+
+        //    foreach (var asset in assets)
+        //    {
+        //        Debug.Log($"{asset.name} {asset.GetType()}");
+        //    }
+
+
+        string StreamingAssetsPath;
+
+        public IResourceLocation location;
+        public AddressableReferenceEntry referenceEntry;
+
+        public RentedFileArray rfa;
+        public AssetsManager mgr;
+        public BundleFileInstance bundle;
+        public AssetsFileInstance CABFile;
+        public AssetFileInfo assetBundle;
+
+        public string ResolveBundlePath(IResourceLocation bundle)
+        {
+            var bundlePath = bundle.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "");
+            bundlePath = Path.Join(StreamingAssetsPath, bundlePath);
+            bundlePath = Path.GetFullPath(bundlePath);
+
+            return bundlePath;
+        }
+
+        public BuiltInBundleAnalyzer(IResourceLocation loc, string streamingAssetPath)
+        {
+            mgr = BundleUtils.CreateDefaultManager();
+
+            location = loc;
+            StreamingAssetsPath = streamingAssetPath;
+
+            LoadBundle();
+        }
+
+        public void LoadBundle()
+        {
+
+            rfa = new RentedFileArray(ResolveBundlePath(location));
+
+            bundle = mgr.LoadBundleFile(rfa.Stream, ResolveBundlePath(location));
+            CABFile = mgr.LoadAssetsFileFromBundle(bundle, 0, false);
+
+            assetBundle = CABFile.file.GetAssetsOfType(AssetClassID.AssetBundle).First();
+
+            var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+
+            referenceEntry = AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry;
+
+            if (referenceEntry == null)
+            {
+                referenceEntry = new();
+                AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry = referenceEntry;
+            }
+
+            referenceEntry.cabName = CABFile.name;
+            referenceEntry.baseInternalId = location.ReverseBundleInternalId();
+            referenceEntry.primaryKey = location.PrimaryKey;
+            // location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
+
+        }
+        public void ProcessBundle()
+        {
+            if (referenceEntry.isDone)
+            {
+                rfa.Dispose();
+                return;
+            }
+
+            var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+
+            AnalyzeAssets();
+            // GenerateBundleName();
+
+            // referenceEntry.isDone = true;
+
+            mgr.UnloadAll();
+            GC.Collect();
+
+            rfa.Dispose();
+        }
+
+        public void AnalyzeAssets()
+        {
+            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            {
+                var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+
+                string bundleName = Path.GetFileName(location.InternalId);
+
+                var builtInObjects = AssetDatabase.LoadAllAssetsAtPath("Resources/unity_builtin_extra");
+
+                foreach (var asset in CABFile.file.AssetInfos)
+                {
+                    if (asset.PathId == 1)
+                        continue;
+
+                    var assetBase = mgr.GetBaseField(CABFile, asset);
+
+                    string assetName = assetBase["m_Name"].AsString;
+                    if (asset.TypeId == (int)AssetClassID.Shader)
+                        assetName = assetBase["m_ParsedForm.m_Name"].AsString;
+
+                    var potentialObjects = builtInObjects.Where(o => o.GetType().Name == assetBase.TypeName && assetName == o.name);
+
+                    if (potentialObjects.Count() > 1)
+                    {
+                        Debug.LogError($"More than one object was found for {assetName}");
+                        continue;
+                    }
+                    else if (potentialObjects.Count() == 0)
+                    {
+                        Debug.LogError($"No object was found for {assetName}");
+                        continue;
+                    }
+
+                    ObjectIdentifier.TryGetObjectIdentifier(potentialObjects.First(), out var obid);
+                    referenceEntry.m_ObjectMapping.Add(new ObjectMapping(obid, asset.PathId));
+                }
+            }
+        }
     }
 }

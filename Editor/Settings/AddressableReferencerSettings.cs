@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 
 namespace AddressableReferencer.Editor.Settings
@@ -32,7 +33,7 @@ namespace AddressableReferencer.Editor.Settings
         public string ExternalStreamingAssetsFolder
         {
             get { return m_ExternalStreamingAssetsFolder; }
-            set { m_ExternalStreamingAssetsFolder = value; EditorUtility.SetDirty(this); }
+            set { m_ExternalStreamingAssetsFolder = value; Save(); }
         }
 
 
@@ -41,7 +42,7 @@ namespace AddressableReferencer.Editor.Settings
         public bool MoveCatalogToSharedBundleBuildPath
         {
             get { return m_MoveCatalogToSharedBundleBuildPath; }
-            set { m_MoveCatalogToSharedBundleBuildPath = value; EditorUtility.SetDirty(this); }
+            set { m_MoveCatalogToSharedBundleBuildPath = value; Save(); }
         }
 
 
@@ -65,18 +66,42 @@ namespace AddressableReferencer.Editor.Settings
             if (!IsBuildTargetActive(target))
                 BuildTargetsForCatalog.Add(target);
 
-            EditorUtility.SetDirty(this);
+            Save();
         }
         public void RemoveBuildTargetForCatalog(BuildTarget target)
         {
             if (IsBuildTargetActive(target))
                 BuildTargetsForCatalog.Remove(target);
 
-            EditorUtility.SetDirty(this);
+            Save();
         }
         public void ClearBuildTargetForCatalogList()
         {
             BuildTargetsForCatalog.Clear();
+            Save();
+        }
+
+
+        [SerializeField]
+        private AddressableReferenceEntry m_builtInBundleReferenceEntry;
+        public AddressableReferenceEntry BuiltInBundleEntry
+        {
+            get { return m_builtInBundleReferenceEntry; }
+            set { m_builtInBundleReferenceEntry = value; Save(); }
+        }
+
+
+        [SerializeField]
+        private bool m_useBaseGameBuiltinAssets;
+        public bool UseBaseGameBuiltinAssets
+        {
+            get { return m_useBaseGameBuiltinAssets; }
+            set { m_useBaseGameBuiltinAssets = value; Save(); }
+        }
+
+
+        public void Save()
+        {
             EditorUtility.SetDirty(this);
         }
     }

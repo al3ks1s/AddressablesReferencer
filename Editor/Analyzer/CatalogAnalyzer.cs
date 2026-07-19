@@ -1,3 +1,4 @@
+using AddressableReferencer.Editor.Settings;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -179,6 +180,8 @@ namespace AddressableReferencer.Editor.Analyzer
                 schema.SaveData();
             }
 
+            EditorUtility.SetDirty(AddressableReferencerDefaultObject.Settings);
+
         }
 
         public void CreateLabelsAssetGroups()
@@ -273,6 +276,16 @@ namespace AddressableReferencer.Editor.Analyzer
                     ba.ProcessBundle();
                 }
             }
+            SaveReferenceSchemas();
+        }
+
+        public void ProcessBuiltInBundle()
+        {
+            BuiltInBundleAnalyzer ba = new BuiltInBundleAnalyzer(
+                unitybuiltins,
+                StreamingAssetsPath
+            );
+            ba.ProcessBundle();
             SaveReferenceSchemas();
         }
 

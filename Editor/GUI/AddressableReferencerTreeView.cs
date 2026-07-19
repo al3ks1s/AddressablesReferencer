@@ -1,3 +1,4 @@
+using AddressableReferencer.Editor.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -97,7 +98,14 @@ namespace AddressableReferencer.Editor.GUI {
 
             // Manual object mapping in case it is needed
             string manualMapString = "Manual object references";
-            root.AddChild(new AddressableReferencerTreeViewItem(manualMapString));
+            var manualMap = new AddressableReferencerTreeViewItem(manualMapString);
+            root.AddChild(manualMap);
+            ManualMapping(manualMap);
+
+            string builtinsMapString = "Unity Built-Ins";
+            var builtinsMapTreeItem = new AddressableReferencerTreeViewItem(builtinsMapString);
+            root.AddChild(builtinsMapTreeItem);
+            BuiltInsMapping(builtinsMapTreeItem);
 
             foreach (var groupGuid in GetTreeViewState().sortOrderList)
                 AddGroupChildrenBuild(guidMap[groupGuid], root);
@@ -170,6 +178,18 @@ namespace AddressableReferencer.Editor.GUI {
         public void ManualMapping(TreeViewItemAdapter root)
         {
             
+        }
+        public void BuiltInsMapping(TreeViewItemAdapter root)
+        {
+            var builtInEntry = AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry;
+            if (builtInEntry == null)
+                return;
+
+            foreach (var mapping in builtInEntry.m_ObjectMapping)
+            {
+                root.AddChild(new AddressableReferencerTreeViewItem(mapping, 1));
+            }
+
         }
 
         // Gui operations
