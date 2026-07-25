@@ -27,7 +27,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
 
             if (!textureName.StartsWith("sactx"))
             {
-                // Debug.LogError($"ExtractTextureNameInfo : {textureName} is an invalid texture name");
                 return null;
             }
 
@@ -35,7 +34,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
 
             if (textureNameParts.Length != 6)
             {
-                // Debug.LogError($"ExtractTextureNameInfo : {textureName} is an invalid texture name");
                 return null;
             }
 

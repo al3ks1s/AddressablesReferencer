@@ -11,7 +11,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
     [Serializable]
     public class AddressableReferenceEntry
     {
-
+        
         [SerializeField]
         public string primaryKey;
 
@@ -36,6 +36,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             {
                 if (m_ObjectMapping == null)
                     m_ObjectMapping = new();
+
 
                 Dictionary<ObjectIdentifier, long > mapping = new();
 

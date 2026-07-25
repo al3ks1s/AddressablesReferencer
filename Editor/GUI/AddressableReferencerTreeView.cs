@@ -96,14 +96,8 @@ namespace AddressableReferencer.Editor.GUI {
                 guidMap.Add(group.Guid, group);
             }
 
-            // Manual object mapping in case it is needed
-            string manualMapString = "Manual object references";
-            var manualMap = new AddressableReferencerTreeViewItem(manualMapString);
-            root.AddChild(manualMap);
-            ManualMapping(manualMap);
-
             string builtinsMapString = "Unity Built-Ins";
-            var builtinsMapTreeItem = new AddressableReferencerTreeViewItem(builtinsMapString);
+            var builtinsMapTreeItem = new AddressableReferencerTreeViewItem(AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry, builtinsMapString, 0);
             root.AddChild(builtinsMapTreeItem);
             BuiltInsMapping(builtinsMapTreeItem);
 
@@ -174,10 +168,6 @@ namespace AddressableReferencer.Editor.GUI {
             {
                 item.AddChild(new AddressableReferencerTreeViewItem(mapping, 2));
             }
-        }
-        public void ManualMapping(TreeViewItemAdapter root)
-        {
-            
         }
         public void BuiltInsMapping(TreeViewItemAdapter root)
         {
@@ -272,18 +262,10 @@ namespace AddressableReferencer.Editor.GUI {
                         {
                             item.mappedObject.ResetOverride();
                         }
-                    
                     }
-
                     break;
-
-
             }
-
-
-
         }
-
 
 
         // Searching
@@ -419,7 +401,7 @@ namespace AddressableReferencer.Editor.GUI {
         }
         void PopulateGeneralContextMenu(ref GenericMenu menu)
         {
-            menu.AddItem(new GUIContent("Create New Object Mapping"), false, CreateMapping);
+
         }
         protected override void ContextClickedItem(int id)
         {
@@ -436,98 +418,14 @@ namespace AddressableReferencer.Editor.GUI {
 
             m_ContextOnItem = true;
 
-            bool isGroup = false;
-            bool isBundle = false;
-            bool isObject = false;
-            bool hasReadOnly = false;
-            bool isMissingPath = false;
-            foreach (var item in selectedNodes)
-            {
-                if (item.type == AddressableReferencerTreeViewItem.ItemType.Group)
-                {
-                    isGroup = true;
-                }
-                else if (item.type == AddressableReferencerTreeViewItem.ItemType.Bundle)
-                {
-                    isBundle = true;
-                }
-                else if (item.type == AddressableReferencerTreeViewItem.ItemType.Object)
-                {
-                    isObject = true;
-                }
-            }
-
-            if (isBundle && isGroup)
-                return;
-
             GenericMenu menu = new GenericMenu();
-            if (selectedNodes.Count == 1)
-            {
 
-            }
-            if (!hasReadOnly)
-            {
-                if (isGroup)
-                {
+            menu.AddItem(new GUIContent("Clear Selected Objects Overrides"), false, ResetOverridesSelected, selectedNodes);
+            menu.AddItem(new GUIContent("Clear All Reference Overrides"), false, m_window.ClearMappingOverrides);
+            menu.AddSeparator(string.Empty);
+            menu.AddItem(new GUIContent("Clear Addressable references"), false, ResetReferences, selectedNodes);
 
-                    var item = selectedNodes.First();
-
-                    if (selectedNodes.Count == 1)
-                    {
-                        if (item.type == AddressableReferencerTreeViewItem.ItemType.Group && item.isManualMap)
-                        {
-                            PopulateGeneralContextMenu(ref menu);
-                        }
-                    }
-
-                    //var group = selectedNodes.First().group;
-                    //menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
-                    //if (selectedNodes.Count == 1)
-                    //{
-                    //    if (!group.IsDefaultGroup() && group.CanBeSetAsDefault())
-                    //        menu.AddItem(new GUIContent("Set as Default"), false, SetGroupAsDefault, selectedNodes);
-                    //}
-                    //menu.AddItem(new GUIContent("Convert schema(s) to Content Directory"), false, ConvertToContentDirectory, selectedNodes);
-
-                    //if (!group.IsDefaultGroup())
-                    //    menu.AddItem(new GUIContent("Delete Group(s)"), false, RemoveGroup, selectedNodes);
-
-                    //foreach (var i in AddressableAssetSettings.CustomAssetGroupCommands)
-                    //    menu.AddItem(new GUIContent(i), false, HandleCustomContextMenuItemGroups, new Tuple<string, List<AssetEntryTreeViewItem>>(i, selectedNodes));
-                }
-                else if (isBundle)
-                {
-                    //    menu.AddItem(new GUIContent("Move Addressables to Group..."), false, MoveEntriesToGroup, new Tuple<Event, List<AssetEntryTreeViewItem>>(Event.current, selectedNodes));
-                    //    menu.AddItem(new GUIContent("Move Addressables to New Group with settings from..."), false, MoveEntriesToNewGroupWithSettings, new Tuple<Event, List<AssetEntryTreeViewItem>>(Event.current, selectedNodes));
-
-                    //    menu.AddItem(new GUIContent("Remove Addressables"), false, RemoveEntry, selectedNodes);
-                    //    menu.AddItem(new GUIContent("Simplify Addressable Names"), false, SimplifyAddresses, selectedNodes);
-
-                    //    if (selectedNodes.Count == 1)
-                    //        menu.AddItem(new GUIContent("Copy Address to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
-
-                    //    else if (selectedNodes.Count > 1)
-                    //        menu.AddItem(new GUIContent("Copy " + selectedNodes.Count + " Addresses to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
-
-                    //    foreach (var i in AddressableAssetSettings.CustomAssetEntryCommands)
-                    //        menu.AddItem(new GUIContent(i), false, HandleCustomContextMenuItemEntries, new Tuple<string, List<AssetEntryTreeViewItem>>(i, selectedNodes));
-                    //}
-                    //else
-                    //    menu.AddItem(new GUIContent("Clear missing references."), false, RemoveMissingReferences);
-                }
-                else
-                {
-                    //if (isObject)
-                    //{
-                    //    if (selectedNodes.Count == 1)
-                    //        menu.AddItem(new GUIContent("Copy Address to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
-                    //    else if (selectedNodes.Count > 1)
-                    //        menu.AddItem(new GUIContent("Copy " + selectedNodes.Count + " Addresses to Clipboard"), false, CopyAddressesToClipboard, selectedNodes);
-                    //}
-                }
-
-                menu.ShowAsContext();
-            }
+            menu.ShowAsContext();
         }
         AddressableReferencerTreeViewItem FindItemInVisibleRows(int id)
         {
@@ -752,28 +650,63 @@ namespace AddressableReferencer.Editor.GUI {
         // Content operations
         public void ResetOverrides()
         {
-            Root.children.ForEach(
-                group => {
-                    if (group.hasChildren)
-                        group.children.ForEach(
-                            bundle => {
-                                if (bundle.hasChildren)
-                                    bundle.children.ForEach(
-                                        map =>
-                                        {
-                                            ((AddressableReferencerTreeViewItem)map).mappedObject.ResetOverride();
-                                        }
-                                    );
-                            }
-                        );
-                }
-            );
+            ResetOverridesRecursive(Root);
         }
-        public void CreateMapping()
+        public void ResetOverridesRecursive(TreeViewItem root) 
         {
+            if (root is AddressableReferencerTreeViewItem)
+                if (((AddressableReferencerTreeViewItem)root).type == AddressableReferencerTreeViewItem.ItemType.Object)
+                    ((AddressableReferencerTreeViewItem)root).mappedObject.ResetOverride();
 
+            if (root.hasChildren)
+            {
+                foreach (var child in root.children)
+                {
+                    ResetOverridesRecursive(child);
+                }
+            }
+            
         }
+        public void ResetOverridesSelected(object context)
+        {
+            List<AddressableReferencerTreeViewItem> selected = context as List<AddressableReferencerTreeViewItem>;
+            foreach (var item in selected)
+            {
+                ResetOverridesRecursive(item);
+            }
+        }
+    
+        public void ResetReferences(object context)
+        {
+            List<AddressableReferencerTreeViewItem> selected = context as List<AddressableReferencerTreeViewItem>;
+            
+            if (!EditorUtility.DisplayDialog("Reset References", "Do you really want to clear selected addressable references?", "Clear", "Cancel"))
+            {
+                return;
+            }
 
+            foreach (var item in selected)
+            {
+                if (item.type == AddressableReferencerTreeViewItem.ItemType.Group)
+                {
+                    if (item.hasChildren)
+                        foreach (AddressableReferencerTreeViewItem c in item.children)
+                        {
+                            ResetEntryReferences(c.bundleEntry);
+                        }
+                    }
+                if (item.type == AddressableReferencerTreeViewItem.ItemType.Bundle)
+                {
+                    ResetEntryReferences(item.bundleEntry);
+                }
+            }
+            Reload();
+        }
+        public void ResetEntryReferences(AddressableReferenceEntry entry)
+        {
+            entry.m_ObjectMapping.Clear();
+            entry.isDone = false;
+        }
     }
 
     public class AddressableReferencerTreeViewItem : TreeViewItemAdapter
@@ -823,6 +756,17 @@ namespace AddressableReferencer.Editor.GUI {
         }
 
         public AddressableReferencerTreeViewItem(AddressableReferenceEntry e) : base(e == null ? 0 : e.cabName.GetHashCode(), 1, e == null ? "[Missing Reference]" : Path.GetFileNameWithoutExtension(e.baseInternalId)) 
+        {
+            group = null;
+
+            bundleEntry = e;
+            mappedObject = null;
+            assetIcon = null;
+
+            type = ItemType.Bundle;
+        }
+
+        public AddressableReferencerTreeViewItem(AddressableReferenceEntry e, string displayName, int depth) : base(e == null ? 0 : e.cabName.GetHashCode(), depth, e == null ? "[Missing Reference]" : displayName) 
         {
             group = null;
 

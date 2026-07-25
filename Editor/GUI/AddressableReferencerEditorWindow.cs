@@ -10,13 +10,8 @@ using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
-using UnityEditor.Build.Content;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.AddressableAssets.Initialization;
-using static UnityEditor.PlayerSettings;
-using static UnityEngine.GraphicsBuffer;
 
 namespace AddressableReferencer.Editor.GUI
 {
@@ -112,7 +107,6 @@ namespace AddressableReferencer.Editor.GUI
                 Tools();
 
                 GUILayout.Label(m_StreamingAssetPath, EditorStyles.label);
-
                 GUILayout.FlexibleSpace();
 
                 BuildAddressableReferences();
@@ -209,7 +203,6 @@ namespace AddressableReferencer.Editor.GUI
                 });
 
                 menu.AddSeparator(string.Empty);
-                menu.AddSeparator(string.Empty);
                 menu.AddItem(new GUIContent("Build Addressables Bundles With Referencer Script"), false, BuildReferenceBundles);
                 
                 menu.DropDown(gBuildRect);
@@ -224,11 +217,10 @@ namespace AddressableReferencer.Editor.GUI
             {
                 var menu = new GenericMenu();
 
-                menu.AddItem(new GUIContent("Clear automatic reference mapping"), false, ClearObjectMappings);
-                menu.AddItem(new GUIContent("Clear manual references"), false, ClearManualMappings);
-                menu.AddItem(new GUIContent("Clear reference overrides"), false, ClearMappingOverrides);
+                menu.AddItem(new GUIContent("Clear Reference Mapping"), false, ClearObjectMappings);
+                menu.AddItem(new GUIContent("Clear Reference Overrides"), false, ClearMappingOverrides);
                 menu.AddSeparator(string.Empty);
-                menu.AddItem(new GUIContent("Clear addressable groups and reference mapping"), false, ClearAddressableGroups);
+                menu.AddItem(new GUIContent("Clear Addressable Groups and Reference Mapping"), false, ClearAddressableGroups);
 
                 menu.DropDown(gClearRect);
             }
@@ -288,7 +280,6 @@ namespace AddressableReferencer.Editor.GUI
             m_entryTree.Reload();
             m_entryTree.Repaint();
         }
-        
         
         private void FastTest()
         {
@@ -366,10 +357,9 @@ namespace AddressableReferencer.Editor.GUI
                 }
             }
 
-            // Should this be done every time?
             m_analyzer.IdentifyGroups();
             m_analyzer.ProcessBuiltInBundle();
-            // m_analyzer.ProcessGroups();
+            m_analyzer.ProcessGroups();
 
             m_entryTree.Reload();
 
@@ -377,7 +367,7 @@ namespace AddressableReferencer.Editor.GUI
         
         private void ReplaceAssetReferences()
         {
-            // To implement
+            var w = GetWindow<AssetReplacer>("Replace all references to one asset by another");
             
         }
 
@@ -402,13 +392,15 @@ namespace AddressableReferencer.Editor.GUI
         }
 
         // Clear and reset
-        private void ClearAddressableGroups()
+        internal void ClearAddressableGroups()
         {
 
             if (!EditorUtility.DisplayDialog("Reset Addressable Referencer", "Do you really want to clear all reference Addressables groups?", "Clear", "Cancel"))
             {
                 return;
             }
+
+            ClearObjectMappings();
 
             var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
             foreach (var group in groups.ToArray())
@@ -417,7 +409,7 @@ namespace AddressableReferencer.Editor.GUI
             }
             m_entryTree.Reload();
         }
-        private void ClearObjectMappings()
+        internal void ClearObjectMappings()
         {
             
             if (!EditorUtility.DisplayDialog("Clear References mapping", "Do you really want to clear all analyzed reference mapping data?", "Clear", "Cancel"))
@@ -428,17 +420,15 @@ namespace AddressableReferencer.Editor.GUI
             var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
             foreach (var group in groups.ToArray())
             {
-                var schema = group.GetSchema(typeof(AddressableReferenceSchema)) as AddressableReferenceSchema;
+                var schema = group.GetSchema<AddressableReferenceSchema>();
                 schema.Entries.Clear();
             }
 
+            AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry = new();
+
             m_entryTree.Reload();
         }
-        private void ClearManualMappings()
-        {
-            // Not implemented as of yet
-        }
-        private void ClearMappingOverrides()
+        internal void ClearMappingOverrides()
         {
             if (!EditorUtility.DisplayDialog("Clear reference overrides", "Do you really want to clear all reference overrides?", "Clear", "Cancel"))
             {
@@ -447,7 +437,7 @@ namespace AddressableReferencer.Editor.GUI
             m_entryTree.ResetOverrides();
             m_entryTree.Reload();
         }
-        private void ResetReferencerSetup()
+        internal void ResetReferencerSetup()
         {
             if (!EditorUtility.DisplayDialog("Reset Addressable Referencer", "Do you really want to reset all Addressable Referencer data?", "Reset", "Cancel"))
             {

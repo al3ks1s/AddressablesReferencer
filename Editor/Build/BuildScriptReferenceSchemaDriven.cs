@@ -79,7 +79,7 @@ namespace AddressableReferencer.Editor.Build {
                     addrResult);
 
                 var targets = AddressableReferencerDefaultObject.Settings.BuildTargetsForCatalog;
-                if (targets.Last() != EditorUserBuildSettings.activeBuildTarget)
+                if (targets.LastOrDefault() != EditorUserBuildSettings.activeBuildTarget)
                 {
                     targets.Remove(EditorUserBuildSettings.activeBuildTarget);
                     targets.Add(EditorUserBuildSettings.activeBuildTarget);
@@ -106,14 +106,13 @@ namespace AddressableReferencer.Editor.Build {
                         if (AddressableReferencerDefaultObject.Settings.MoveCatalogToSharedBundleBuildPath)
                         {
                             CopyCatalog(aaContext, contentCatalog, builderInput, target);
-                        }
-    
+                        }                 
                     }
                 }
             }
 
-            //if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
-            //    RemoveBuiltInAssetBundle(addrResult);
+            if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
+                RemoveBuiltInAssetBundle(addrResult);
 
             // sort catalogs to be deterministic
             aaContext.runtimeData.CatalogLocations.Sort((a, b) => string.Compare(a.InternalId, b.InternalId, StringComparison.Ordinal));

@@ -57,8 +57,8 @@ namespace AddressableReferencer.Editor.Analyzer
                 Locator = LocatorHandle.WaitForCompletion();
 
                 bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
-                monoscript = bundles.Find(f => f.PrimaryKey.Contains("monoscripts"));
-                unitybuiltins = bundles.Find(f => f.PrimaryKey.Contains("unitybuiltinassets"));
+                monoscript = TryFindMonoscriptBundle();
+                unitybuiltins = TryFindBuiltinAssetsBundle();
 
                 IdentifyGroups();
             }
@@ -97,6 +97,16 @@ namespace AddressableReferencer.Editor.Analyzer
 
             return string.Empty;
 
+        }
+        public IResourceLocation TryFindMonoscriptBundle()
+        {
+            // TODO - Find the bundle when the naming style is limited to the hash
+            return bundles.Find(f => f.PrimaryKey.Contains("monoscripts"));
+        }
+        public IResourceLocation TryFindBuiltinAssetsBundle()
+        {
+            // TODO - Find the bundle when the naming style is limited to the hash
+            return bundles.Find(f => f.PrimaryKey.Contains("unitybuiltinassets"));
         }
 
         public void IdentifyGroups()
@@ -171,19 +181,6 @@ namespace AddressableReferencer.Editor.Analyzer
 
         }
 
-        public void SaveReferenceSchemas()
-        {
-            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
-            foreach (var group in groups)
-            {
-                AddressableReferenceSchema schema = group.Schemas.Find(s => s is AddressableReferenceSchema) as AddressableReferenceSchema;
-                schema.SaveData();
-            }
-
-            EditorUtility.SetDirty(AddressableReferencerDefaultObject.Settings);
-
-        }
-
         public void CreateLabelsAssetGroups()
         {
             using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
@@ -215,7 +212,6 @@ namespace AddressableReferencer.Editor.Analyzer
                 }
             }
         }
-
         public void CreateSeparatelyPackedGroups()
         {
             using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
@@ -237,7 +233,6 @@ namespace AddressableReferencer.Editor.Analyzer
                 }
             }
         }
-
         public void CreatePackedTogetherGroups()
         {
             using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
@@ -254,9 +249,9 @@ namespace AddressableReferencer.Editor.Analyzer
             }
         }
 
+
         public void ProcessGroups()
         {
-
             List<Task> taskList = new();
 
             int counter = 0;
@@ -278,7 +273,6 @@ namespace AddressableReferencer.Editor.Analyzer
             }
             SaveReferenceSchemas();
         }
-
         public void ProcessBuiltInBundle()
         {
             BuiltInBundleAnalyzer ba = new BuiltInBundleAnalyzer(
@@ -289,9 +283,10 @@ namespace AddressableReferencer.Editor.Analyzer
             SaveReferenceSchemas();
         }
 
+
         public static AddressableAssetGroup CreateOrGetGroup(string name, BundledAssetGroupSchema.BundlePackingMode mode)
         {
-            var assetGroup = AddressableAssetSettingsDefaultObject.Settings.FindGroup($"{name} (Reference)");
+            var assetGroup = AddressableAssetSettingsDefaultObject.Settings.FindGroup(g => g.Name == $"{name} (Reference)" && g.IsReferenceGroup());
 
             if (assetGroup == null)
             {
@@ -301,10 +296,10 @@ namespace AddressableReferencer.Editor.Analyzer
                     true,
                     true,
                     new() {
-                    ScriptableObject.CreateInstance<AddressableReferenceSchema>(),
-                    CreateBundleSchema(
-                        mode
-                    ),
+                        ScriptableObject.CreateInstance<AddressableReferenceSchema>(),
+                        CreateBundleSchema(
+                            mode
+                        ),
                     }
                 );
             }
@@ -312,7 +307,6 @@ namespace AddressableReferencer.Editor.Analyzer
             return assetGroup;
 
         }
-
         public static BundledAssetGroupSchema CreateBundleSchema(
         BundledAssetGroupSchema.BundlePackingMode packMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether,
         BundledAssetGroupSchema.BundleNamingStyle nameStyle = BundledAssetGroupSchema.BundleNamingStyle.AppendHash)
@@ -341,6 +335,19 @@ namespace AddressableReferencer.Editor.Analyzer
             );
 
             return schema;
+        }
+
+        public void SaveReferenceSchemas()
+        {
+            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
+            foreach (var group in groups)
+            {
+                AddressableReferenceSchema schema = group.Schemas.Find(s => s is AddressableReferenceSchema) as AddressableReferenceSchema;
+                schema.SaveData();
+            }
+
+            EditorUtility.SetDirty(AddressableReferencerDefaultObject.Settings);
+
         }
 
 

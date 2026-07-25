@@ -282,14 +282,6 @@ namespace AddressableReferencer.Editor.Analyzer
     public class BuiltInBundleAnalyzer
     {
 
-        //var assets = AssetDatabase.LoadAllAssetsAtPath("Resources/unity_builtin_extra");
-
-        //    foreach (var asset in assets)
-        //    {
-        //        Debug.Log($"{asset.name} {asset.GetType()}");
-        //    }
-
-
         string StreamingAssetsPath;
 
         public IResourceLocation location;
@@ -359,7 +351,7 @@ namespace AddressableReferencer.Editor.Analyzer
             AnalyzeAssets();
             // GenerateBundleName();
 
-            // referenceEntry.isDone = true;
+            referenceEntry.isDone = true;
 
             mgr.UnloadAll();
             GC.Collect();
