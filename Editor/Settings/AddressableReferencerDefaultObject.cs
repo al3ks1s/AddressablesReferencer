@@ -15,7 +15,6 @@ namespace AddressableReferencer.Editor.Settings
         public const string kPathEnvName = "AddressablesReferencerBuildPath";
 
         public const string kName = "AddressableReferencer";
-
         public const string kDefaultSettingAssetName = kName + "Setting";
         public const string kDefaultSettingFolder = "Assets/" + kName + "Data";
         public const string kDefaultSettingObjectName = "fr.al3ks1s.addressablereferencer";

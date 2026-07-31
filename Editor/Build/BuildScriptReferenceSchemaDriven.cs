@@ -274,18 +274,18 @@ namespace AddressableReferencer.Editor.Build {
 
             var sharedBundleGroup = aaContext.Settings.GetSharedBundleGroup();
             var ContentPackingSettings = sharedBundleGroup.GetSchema<BundledAssetGroupSchema>();
-            var outputPath = Path.GetFullPath(Path.Join(ContentPackingSettings.BuildPath.GetValue(aaContext.Settings, false), builderInput.RuntimeCatalogFilename));
+            var outputPath = Path.GetFullPath(Path.Join(ContentPackingSettings.BuildPath.GetValue(aaContext.Settings, true), builderInput.RuntimeCatalogFilename));
 
             if (ContentPackingSettings.BuildPath.GetName(aaContext.Settings).Equals("Local.BuildPath") ) //&& target == BuildTarget.NoTarget)
                 return;
 
             if (File.Exists(catalogPath + ".bin"))
             {
-                CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".bin", outputPath + $"-{(target == BuildTarget.NoTarget ? string.Empty : Enum.GetName(typeof(BuildTarget), target))}" + ".bin");
+                CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".bin", outputPath + $"{(target == BuildTarget.NoTarget ? string.Empty : $"-{Enum.GetName(typeof(BuildTarget), target)}")}" + ".bin");
 
                 if (File.Exists(catalogPath + ".hash")) 
                 {
-                    CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".hash", outputPath + $"-{(target == BuildTarget.NoTarget ? string.Empty : Enum.GetName(typeof(BuildTarget), target))}" + ".hash");
+                    CopyFileToDestinationWithTimestampIfDifferent(catalogPath + ".hash", outputPath + $"{(target == BuildTarget.NoTarget ? string.Empty : $"-{Enum.GetName(typeof(BuildTarget), target)}")}" + ".hash");
                 } 
                 else
                 { 
