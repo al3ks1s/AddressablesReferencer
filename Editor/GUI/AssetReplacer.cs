@@ -20,7 +20,7 @@ namespace AddressableReferencer.Editor.GUI {
 
             if (GUILayout.Button(new GUIContent("Replace all asset references")))
             {
-                if (!CanBeReplaced())
+                if (!CanBeReplaced()) 
                     return;
 
                 Debug.Log($"Will replace {AssetDatabase.GetAssetPath(assetToReplace)} by {AssetDatabase.GetAssetPath(assetToReplaceBy)}");

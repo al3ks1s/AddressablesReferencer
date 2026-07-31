@@ -11,6 +11,9 @@ namespace AddressableReferencer.Editor.Settings
     public class AddressableReferencerDefaultObject : ScriptableObject
     {
 
+        public static string EnvBuildPath = System.Environment.GetEnvironmentVariable(kPathEnvName);
+        public const string kPathEnvName = "AddressablesReferencerBuildPath";
+
         public const string kName = "AddressableReferencer";
 
         public const string kDefaultSettingAssetName = kName + "Setting";

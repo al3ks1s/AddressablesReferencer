@@ -2,6 +2,7 @@ using AddressableReferencer.Editor.Analyzer;
 using AddressableReferencer.Editor.Build;
 using AddressableReferencer.Editor.Settings;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.AddressableAssets.Initialization;
 
 namespace AddressableReferencer.Editor.GUI
 {
@@ -283,12 +285,11 @@ namespace AddressableReferencer.Editor.GUI
         
         private void FastTest()
         {
-            var assets = AssetDatabase.LoadAllAssetsAtPath("Resources/unity_builtin_extra");
+            
 
-            foreach (var asset in assets)
-            {
-                Debug.Log($"{asset.name} {asset.GetType()}");
-            }
+            Debug.Log($"{AddressableReferencerDefaultObject.EnvBuildPath}");
+
+            
         }
 
         // Processing
@@ -368,7 +369,6 @@ namespace AddressableReferencer.Editor.GUI
         private void ReplaceAssetReferences()
         {
             var w = GetWindow<AssetReplacer>("Replace all references to one asset by another");
-            
         }
 
         // Build
