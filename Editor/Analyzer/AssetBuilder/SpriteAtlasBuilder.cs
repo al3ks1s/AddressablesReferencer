@@ -101,7 +101,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
 
             Debug.Log($"Searching for sprite:{spriteName} in altas {Path.GetFileNameWithoutExtension(Location.InternalId)}");
             var sprites = AssetDatabase.FindAssets($"{spriteName.Replace("]", "")} t:Sprite");
-            string spriteGuid = string.Empty;
+            string spriteGuid = sprites[0];
 
             if (sprites.Length > 1)
             {
