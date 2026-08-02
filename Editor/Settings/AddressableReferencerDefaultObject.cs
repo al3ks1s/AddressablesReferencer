@@ -146,7 +146,6 @@ namespace AddressableReferencer.Editor.Settings
                     AssetDatabase.CreateAsset(so, kDefaultSettingFolder + "/DefaultObject.asset");
                     AssetDatabase.SaveAssets();
                     EditorBuildSettings.AddConfigObject(kDefaultSettingObjectName, so, true);
-
                 }
 
                 so.SetSettingObject(s_DefaultSettingsObject);

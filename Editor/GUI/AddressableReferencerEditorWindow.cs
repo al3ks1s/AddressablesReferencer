@@ -287,7 +287,7 @@ namespace AddressableReferencer.Editor.GUI
         {
             
 
-            Debug.Log($"{AddressableReferencerDefaultObject.EnvBuildPath}");
+            Debug.Log($"{Path.GetFullPath("c:/user/aaaa/\\\\\\\\\\BBBBBBBBBBBBBBBBBBBB".Replace("\\", "/"))}");
 
             
         }
@@ -388,7 +388,7 @@ namespace AddressableReferencer.Editor.GUI
 
             AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
             bool success = string.IsNullOrEmpty(result.Error);
-
+            
         }
 
         // Clear and reset

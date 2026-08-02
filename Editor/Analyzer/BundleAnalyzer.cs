@@ -88,10 +88,7 @@ namespace AddressableReferencer.Editor.Analyzer
 
         public string ResolveBundlePath(IResourceLocation bundle)
         {
-            var bundlePath = bundle.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "");
-            bundlePath = Path.Join(StreamingAssetsPath, bundlePath);
-            bundlePath = Path.GetFullPath(bundlePath);
-
+            var bundlePath = bundle.GetFullInternalIdPath(StreamingAssetsPath);
             return bundlePath;
         }
 
@@ -295,10 +292,7 @@ namespace AddressableReferencer.Editor.Analyzer
 
         public string ResolveBundlePath(IResourceLocation bundle)
         {
-            var bundlePath = bundle.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "");
-            bundlePath = Path.Join(StreamingAssetsPath, bundlePath);
-            bundlePath = Path.GetFullPath(bundlePath);
-
+            var bundlePath = bundle.GetFullInternalIdPath(StreamingAssetsPath);
             return bundlePath;
         }
 

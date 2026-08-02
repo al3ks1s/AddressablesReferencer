@@ -3,6 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using static UnityEditor.AddressableAssets.Build.Layout.BuildLayout;
 
 public static class IResourceLocationExtension
 {
@@ -24,6 +25,16 @@ public static class IResourceLocationExtension
         }
         
         return internalId;
+    }
+
+    public static string GetFullInternalIdPath(this IResourceLocation location, string StreamingAssetsPath)
+    {
+        var bundlePath = location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "");
+        bundlePath = Path.Join(StreamingAssetsPath, bundlePath);
+        bundlePath = bundlePath.Replace("\\", "/");
+        bundlePath = Path.GetFullPath(bundlePath);
+
+        return bundlePath;
     }
 
     internal static char PathSeparatorForPlatform(this BuildTarget target)
