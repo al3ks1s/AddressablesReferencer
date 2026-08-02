@@ -99,11 +99,13 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
             var spriteAsset = AssetManager.GetExtAsset(CabFile, 0, atlasBundleAsset.baseField["m_PackedSprites.Array"][index]["m_PathID"].AsLong);
             spriteName = spriteAsset.baseField["m_Name"].AsString;
 
+            Debug.Log($"Searching for sprite:{spriteName} in altas {Path.GetFileNameWithoutExtension(Location.InternalId)}");
             var sprites = AssetDatabase.FindAssets($"{spriteName.Replace("]", "")} t:Sprite");
-            string spriteGuid = sprites[0];
+            string spriteGuid = string.Empty;
 
             if (sprites.Length > 1)
             {
+                spriteGuid = sprites[0];
 
                 // Debug.Log($"Found {sprites.Length} sprites for {spriteName}");
 

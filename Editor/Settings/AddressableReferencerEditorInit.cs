@@ -13,8 +13,8 @@ namespace AddressableReferencer.Editor.Settings {
 
         static AddressableReferencerEditorInit()
         {
-            //if (!AddressableReferencerDefaultObject.SettingsExists)
-            //    AddressableReferencerDefaultObject.InitialSetup();
+            if (!AddressableReferencerDefaultObject.SettingsExists)
+                AddressableReferencerDefaultObject.InitialSetup();
         }
     
     }
