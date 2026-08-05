@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
@@ -17,8 +16,6 @@ using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
-using UnityEngine.ResourceManagement.ResourceLocations;
-using static UnityEngine.EventSystems.EventTrigger;
 
 namespace AddressableReferencer.Editor.Build {
 

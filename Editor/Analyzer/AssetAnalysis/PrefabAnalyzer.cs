@@ -1,7 +1,5 @@
 using AssetsTools.NET.Extra;
-using Steamworks;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -9,7 +7,6 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEngine;
-using UnityEngine.U2D;
 
 namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 {

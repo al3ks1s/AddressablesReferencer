@@ -115,7 +115,11 @@ namespace AddressableReferencer.Editor.Settings
                     else
                     {
                         EnsureFolderExists();
-                        Settings = AddressableReferencerSettings.Create(kDefaultSettingFolder, kDefaultSettingAssetName);
+                        if (AddressableAssetSettingsDefaultObject.SettingsExists)
+                        {
+                            Debug.LogWarning($"Cannot create Addressable Referencer settings without Addressables settings. Please create them beforehand (Window > AssetManagement > Addressables > Group)");
+                            Settings = AddressableReferencerSettings.Create(kDefaultSettingFolder, kDefaultSettingAssetName);
+                        }
                     }
 
                 }
@@ -157,12 +161,19 @@ namespace AddressableReferencer.Editor.Settings
 
         public static void InitialSetup()
         {
+
+            if (!AddressableAssetSettingsDefaultObject.SettingsExists)
+            {
+                Debug.LogWarning($"Cannot create Addressable Referencer settings without Addressables settings. Please create them beforehand (Window > AssetManagement > Addressables > Group)");
+                return;
+            } 
+
             var settings = AddressableReferencerDefaultObject.Settings;
 
             // Replace the build script
             string BuildScriptPath = AddressableAssetSettingsDefaultObject.Settings.DataBuilderFolder + "/" + typeof(BuildScriptReferenceMode).Name + ".asset";
             string guid = AssetDatabase.AssetPathToGUID(BuildScriptPath, AssetPathToGUIDOptions.OnlyExistingAssets);
-
+             
             if (!string.IsNullOrEmpty(guid))
             {
                 

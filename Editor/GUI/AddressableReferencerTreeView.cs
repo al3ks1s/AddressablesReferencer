@@ -96,10 +96,12 @@ namespace AddressableReferencer.Editor.GUI {
                 guidMap.Add(group.Guid, group);
             }
 
-            string builtinsMapString = "Unity Built-Ins";
-            var builtinsMapTreeItem = new AddressableReferencerTreeViewItem(AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry, builtinsMapString, 0);
-            root.AddChild(builtinsMapTreeItem);
-            BuiltInsMapping(builtinsMapTreeItem);
+            if (AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry != null) { 
+                string builtinsMapString = "Unity Built-Ins";
+                var builtinsMapTreeItem = new AddressableReferencerTreeViewItem(AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry, builtinsMapString, 0);
+                root.AddChild(builtinsMapTreeItem);
+                BuiltInsMapping(builtinsMapTreeItem);
+            }
 
             foreach (var groupGuid in GetTreeViewState().sortOrderList)
                 AddGroupChildrenBuild(guidMap[groupGuid], root);
@@ -766,7 +768,7 @@ namespace AddressableReferencer.Editor.GUI {
             type = ItemType.Bundle;
         }
 
-        public AddressableReferencerTreeViewItem(AddressableReferenceEntry e, string displayName, int depth) : base(e == null ? 0 : e.cabName.GetHashCode(), depth, e == null ? "[Missing Reference]" : displayName) 
+        public AddressableReferencerTreeViewItem(AddressableReferenceEntry e, string displayName, int depth) : base((e == null || e.cabName == null) ? 0 : e.cabName.GetHashCode(), depth, e == null ? "[Missing Reference]" : displayName) 
         {
             group = null;
 

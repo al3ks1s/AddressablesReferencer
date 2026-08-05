@@ -1,6 +1,7 @@
 using AddressableReferencer.Editor.Analyzer;
 using AddressableReferencer.Editor.Build;
 using AddressableReferencer.Editor.Settings;
+using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -81,6 +82,13 @@ namespace AddressableReferencer.Editor.GUI
         }
         public void OnGUI()
         {
+
+            if (!AddressableAssetSettingsDefaultObject.SettingsExists)
+            { 
+                DisplaySettingsMessage();
+                return;
+            }
+
             if (m_entryTree == null)
                 InitializeObjectTree();
 
@@ -95,6 +103,22 @@ namespace AddressableReferencer.Editor.GUI
 
             m_entryTree.OnGUI(treeRect);
         }
+
+        public void DisplaySettingsMessage()
+        {
+            GUILayout.Space(50);
+            GUILayout.Space(20);
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(50);
+            UnityEngine.GUI.skin.label.wordWrap = true;
+            UnityEngine.GUI.skin.label.alignment = TextAnchor.UpperCenter;
+           
+            GUILayout.Label(
+                "Go to any Addressables editor window and click the \"Create\" button above or simply drag an asset into this window to start using Addressables.\n\n Ignore its proposal of conversion.\n\n Once you begin, the Addressables system will save some assets to your project to keep up with its data. Afterward go back to this window and Addressable Referencer will do the same.");
+            GUILayout.Space(50);
+            GUILayout.EndHorizontal();
+        }
+
 
         public void RenderToolbar(Rect rect)
         {
@@ -287,7 +311,7 @@ namespace AddressableReferencer.Editor.GUI
         {
             
 
-            Debug.Log($"{Path.GetFullPath("c:/user/aaaa/\\\\\\\\\\BBBBBBBBBBBBBBBBBBBB".Replace("\\", "/"))}");
+            Debug.Log($"{AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry.cabName }");
 
             
         }
