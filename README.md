@@ -8,7 +8,7 @@ The tool is primarily aimed at game modding to access directly the base game ass
 
 The easiest method to install is to use the package manager's "Install from Git url feature". 
 
-![alt text](Documentation/Images/Install-Git.png)
+![alt text](Documentation~/Images/Install-Git.png)
 
 ## Usage
 
