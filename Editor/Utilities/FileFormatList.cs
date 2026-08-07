@@ -5,6 +5,11 @@ using UnityEngine;
 
 namespace AddressableReferencer.Editor.Utilities
 {
+
+    /// <summary>
+    /// A list of alternative file extensions for different types of objects.
+    /// Used as fallback file extension when the exact path found in the bundles aren't the ones exported by AssetRipper or other such tools
+    /// </summary>
     public class FileFormatList
     {
 

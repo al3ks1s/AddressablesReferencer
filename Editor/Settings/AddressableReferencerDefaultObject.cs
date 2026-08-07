@@ -97,7 +97,9 @@ namespace AddressableReferencer.Editor.Settings
             }
         }
 
-
+        /// <summary>
+        /// Gets the default <see cref="AddressableReferencerSettings"/> object.
+        /// </summary>
         public static AddressableReferencerSettings Settings
         {
             get
@@ -159,6 +161,9 @@ namespace AddressableReferencer.Editor.Settings
             }
         }
 
+        /// <summary>
+        /// Creates the default <see cref="AddressableReferencerSettings"/>, sets up the <see cref="BuildScriptReferenceMode"/>, prepares the profile variables for build and load paths.
+        /// </summary>
         public static void InitialSetup()
         {
 
@@ -197,6 +202,9 @@ namespace AddressableReferencer.Editor.Settings
                 AddressableAssetSettingsDefaultObject.Settings.profileSettings.CreateValue("Addressable References.LoadPath", "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]");
         }
 
+        /// <summary>
+        /// Deletes the Addressable Referencer settings.
+        /// </summary>
         public static void ClearSettings()
         {
             AddressableAssetSettingsDefaultObject.Settings.profileSettings.RemoveValue("Addressable References.BuildPath");

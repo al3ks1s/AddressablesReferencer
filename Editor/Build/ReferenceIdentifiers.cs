@@ -11,6 +11,10 @@ using UnityEngine;
 
 namespace AddressableReferencer.Editor.Build
 {
+
+    /// <summary>
+    /// Class that provides the build pipeline with the internal file name and object id from the game bundles during addressables build.
+    /// </summary>
     public class ReferenceIdentifier : IDeterministicIdentifiers
     {
 
@@ -26,7 +30,11 @@ namespace AddressableReferencer.Editor.Build
             defaultIdentifier = contiguousBundles ? new PrefabPackedIdentifiers() : (IDeterministicIdentifiers)new Unity5PackedIdentifiers();
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Retrieves the CABName of a reference bundle depending on the initial name identifier. As a fallback, generates a deterministic internal file name from the passed in name for bundles that are not references.
+        /// </summary>
+        /// <param name="name">Name identifier for internal file name generation</param>
+        /// <returns>Deterministic file name.</returns>
         public virtual string GenerateInternalFileName(string name)
         {
             if (m_bundleReferences.TryGetValue(name, out var cabName))
@@ -36,7 +44,11 @@ namespace AddressableReferencer.Editor.Build
             return defaultIdentifier.GenerateInternalFileName(name);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Retrieves the base game bundle PathID for the <see cref="ObjectIdentifier"/> . As a fallback, generates a deterministic id for a given object in the build.
+        /// </summary>
+        /// <param name="objectID">Object identifier to for id generation.</param>
+        /// <returns><c>long</c> representing the id of the objectID.</returns>
         public virtual long SerializationIndexFromObjectIdentifier(ObjectIdentifier objectID)
         {
             if (m_objectReferences.TryGetValue(objectID, out var serialIndex))

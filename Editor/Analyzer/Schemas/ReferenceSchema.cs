@@ -27,8 +27,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         }
 
 
-        public List<AddressableReferenceEntry> m_Entries;
-
+        private List<AddressableReferenceEntry> m_Entries;
         public List<AddressableReferenceEntry> Entries
         {
             get 
@@ -60,7 +59,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                 return Entries.Select(e => e.ObjectMappingDict.Count).ToList();
             }
         }
-
         public int ObjectCount
         {
             get
@@ -69,8 +67,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             }
         }
 
-        private GUIContent m_ReferenceEnabledGuiContent = new GUIContent("Enable Reference", "This addressable group will be used to generate reference at build time.");
 
+        private GUIContent m_ReferenceEnabledGuiContent = new GUIContent("Enable Reference", "This addressable group will be used to generate reference at build time.");
+        
         /// <inheritdoc/>
         public override void OnGUI()
         {
@@ -110,14 +109,13 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             EditorGUI.showMixedValue = false;
         }
 
+        /// <summary>
+        /// Marks the current object as dirty to save its data in editor.
+        /// </summary>
         public void SaveData()
         {
             SetDirty(true);
         }
 
-
     }
-
-
-
 }

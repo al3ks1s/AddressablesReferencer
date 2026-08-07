@@ -57,22 +57,23 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         }
     }
 
-
+    /// <summary>
+    /// Defines a link between an editor-side object or component and the in-bundle object identifier.
+    /// 
+    /// The ObjectIdentifier had to be decomposed into its internal values as the ObjectIdentifier's fields aren't quite serializable.
+    /// </summary>
     [Serializable]
     public class ObjectMapping
     {
 
         public ObjectMapping(ObjectIdentifier obid, long pathId)
         {
-
             m_GUID = obid.guid.ToString();
             m_LocalIdentifierInFile = obid.localIdentifierInFile;
             m_FilePath = obid.filePath;
             m_FileType = obid.fileType;
-
             m_pathId = pathId;
         }
-
 
         [SerializeField]
         public string m_GUID;
@@ -102,6 +103,9 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             m_pathIdOverride = 0;
         }
 
+        /// <summary>
+        /// The <see cref="ObjectIdentifier"/> represented by this object.
+        /// </summary>
         public ObjectIdentifier ObjectId
         {
             get
@@ -110,7 +114,15 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             }
         }
 
-        public ObjectIdentifier CreateObjectIdentifier(string GUID, long localIdentifierInFile, FileType fileType, string filePath)
+        /// <summary>
+        /// Recreate an ObjectIdentifier 
+        /// </summary>
+        /// <param name="GUID">The specific asset that contains this object.</param>
+        /// <param name="localIdentifierInFile">The index of the object inside a serialized file.</param>
+        /// <param name="fileType">Type of file that contains this object.</param>
+        /// <param name="filePath">The file path on disk that contains this object. (Only used for objects not known by the AssetDatabase).</param>
+        /// <returns>The reconstructed <see cref="ObjectIdentifier"/></returns>
+        public static ObjectIdentifier CreateObjectIdentifier(string GUID, long localIdentifierInFile, FileType fileType, string filePath)
         {
 
             object boxed = new ObjectIdentifier();

@@ -16,10 +16,8 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 
 namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 {
-
     public class GenericAnalyzer
     {
-
         public static GenericAnalyzer GetAnalyzer(string assetType, BundleAnalyzer parentAnalyzer)
         {
 
@@ -30,7 +28,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
                 "GameObject" => new PrefabAnalyzer(parentAnalyzer),
                 _ => new GenericAnalyzer(parentAnalyzer),
             };
-
         }
 
         public static GenericAnalyzer GetAnalyzer(int assetType,  BundleAnalyzer parentAnalyzer)
@@ -282,7 +279,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
         }
 
     }
-
 
     /// <summary>
     /// Generic assetAnalyzer class

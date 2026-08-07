@@ -13,7 +13,6 @@ namespace AddressableReferencer.Editor.Build
     [CreateAssetMenu(fileName = "BuildScriptReferenceMode.asset", menuName = "Addressables Referencer/BuildScriptReferenceMode")]
     public class BuildScriptReferenceMode : BuildScriptPackedMode
     {
-
         public override string Name
         {
             get { return "Reference Build Script"; }
@@ -33,7 +32,6 @@ namespace AddressableReferencer.Editor.Build
 
         internal static T CreateScriptAsset<T>() where T : ScriptableObject
         {
-
             var DataBuilderFolder = AddressableAssetSettingsDefaultObject.Settings.DataBuilderFolder;
 
             var script = CreateInstance<T>();
@@ -47,7 +45,5 @@ namespace AddressableReferencer.Editor.Build
             }
             return AssetDatabase.LoadAssetAtPath<T>(path);
         }
-
-
     }
 }
