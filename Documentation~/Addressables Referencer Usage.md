@@ -54,6 +54,7 @@ Afterward, Addressables Referencer settings will be automatically created and th
 In case something went horribly wrong during your work, you can reset the Addressables Referencer settings to go back to a clean slate.
 
 `Tools & Setup > Reset Addressables Referencer Settings`
+
 ![alt text](Images/Reset-Settings.png)
 
 ## Bundle Analysis
