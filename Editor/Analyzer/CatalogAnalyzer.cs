@@ -344,11 +344,8 @@ namespace AddressableReferencer.Editor.Analyzer
                 AddressableReferenceSchema schema = group.Schemas.Find(s => s is AddressableReferenceSchema) as AddressableReferenceSchema;
                 schema.SaveData();
             }
-
             EditorUtility.SetDirty(AddressableReferencerDefaultObject.Settings);
-
+            AssetDatabase.ForceReserializeAssets();
         }
-
-
     }
 }

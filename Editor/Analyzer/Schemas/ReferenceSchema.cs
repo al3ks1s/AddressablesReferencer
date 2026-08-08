@@ -12,7 +12,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         [SerializeField]
         bool m_ReferenceEnabled = true;
-
+         
         public bool ReferenceEnabled
         {
             get { return m_ReferenceEnabled; }
@@ -27,7 +27,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         }
 
         [SerializeField]
-        private List<AddressableReferenceEntry> m_Entries;
+        public List<AddressableReferenceEntry> m_Entries;
         public List<AddressableReferenceEntry> Entries
         {
             get 
@@ -116,6 +116,5 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         {
             SetDirty(true);
         }
-
     }
 }
