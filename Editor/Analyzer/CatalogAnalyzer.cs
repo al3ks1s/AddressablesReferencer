@@ -279,7 +279,6 @@ namespace AddressableReferencer.Editor.Analyzer
                 StreamingAssetsPath
             );
             ba.ProcessBundle();
-            SaveReferenceSchemas();
         }
 
 
