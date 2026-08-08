@@ -184,12 +184,11 @@ namespace AddressableReferencer.Editor.Build {
                 !assetGroup.entries.Any())
                 return string.Empty;
         
-            // Debug.Log($"Processing schema for {assetGroup.Name}, has {schema.Entries.Count} entries");
+            Debug.Log($"Processing schema for {assetGroup.Name}, has {schema.Entries.Count} entries");
 
             foreach (var entry in schema.Entries)
             {
-
-                // Debug.Log($"Entry has {entry.ObjectMappingDict.Count} objects, Adding {entry.internalName} - {entry.cabName}");
+                Debug.Log($"Entry has {entry.ObjectMappingDict.Count} objects, Adding {entry.internalName} - {entry.cabName}");
                 m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
                 m_internalNameToReferenceEntry.TryAdd(entry.internalName, entry);
 

@@ -249,7 +249,6 @@ namespace AddressableReferencer.Editor.Analyzer
             }
         }
 
-
         public void ProcessGroups()
         {
             List<Task> taskList = new();
