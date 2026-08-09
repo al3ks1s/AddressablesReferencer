@@ -344,7 +344,7 @@ namespace AddressableReferencer.Editor.Analyzer
                 schema.SaveData();
             }
             EditorUtility.SetDirty(AddressableReferencerDefaultObject.Settings);
-            AssetDatabase.ForceReserializeAssets();
+            AssetDatabase.SaveAssets();
         }
     }
 }
