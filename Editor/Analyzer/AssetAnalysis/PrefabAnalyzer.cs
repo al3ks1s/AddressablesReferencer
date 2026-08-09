@@ -54,8 +54,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
                 var component = currentGO.GetComponentAtIndex(i);
                 ObjectIdentifier.TryGetObjectIdentifier(component, out var objectId);
 
-                if (!(component.GetType() == typeof(Transform)))
-                    objects.Add(new ObjectMapping(objectId, assetDeps.InternalPaths.ToList()[i]));
+                objects.Add(new ObjectMapping(objectId, assetDeps.InternalPaths.ToList()[i]));
 
             }
 
