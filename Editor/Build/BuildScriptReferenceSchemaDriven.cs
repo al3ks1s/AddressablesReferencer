@@ -1,3 +1,4 @@
+using AddressableReferencer.Editor.Build.SchemaBuilders;
 using AddressableReferencer.Editor.Settings;
 using System;
 using System.Collections.Generic;
@@ -5,16 +6,21 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
+using UnityEditor.AddressableAssets.Build.CatalogBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.Initialization;
 using UnityEngine.AddressableAssets.ResourceLocators;
 
 namespace AddressableReferencer.Editor.Build {
@@ -25,125 +31,33 @@ namespace AddressableReferencer.Editor.Build {
     /// </summary>
     public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
     {
-        
+
         private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
         private Dictionary<string, string> m_bundleReferences = new();
         private Dictionary<string, AddressableReferenceEntry> m_internalNameToReferenceEntry = new();
 
-        /// <inheritdoc />
-        private void AddInstanceAndSceneProvider(AddressableAssetsBuildContext aaContext)
-        {
-            aaContext.providerTypes.Add(instanceProviderType.Value);
-            aaContext.providerTypes.Add(sceneProviderType.Value);
-        }
+        // ------------------------------------------------------------------------------------------------
+        // Please make these at least protected, i want to use them without copy pasting
+
+
+        // End of private methods directly taken from Addressables to make this work
+        // ------------------------------------------------------------------------------------------------
 
         /// <inheritdoc />
-        private TResult CreateErrorResult<TResult>(string errorString, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext) where TResult : IDataBuilderResult
+        public override ISchemaBuilder[] CreateSchemaBuilders()
         {
-            BuildLayoutGenerationTask.GenerateErrorReport(errorString, aaContext, builderInput.PreviousContentState);
-            return AddressableAssetBuildResult.CreateResult<TResult>(null, 0, errorString);
+            return new ISchemaBuilder[] {
+                new ReferenceSchemaBuilder(),
+                new BundledAssetSchemaBuilder(),
+                new CatalogExportSchemaBuilder(),
+#if ENABLE_CONTENT_DIRECTORIES
+                new ContentDirectorySchemaBuilder(),
+#endif
+            };
         }
 
-        /// <inheritdoc />
-        protected override TResult DoBuild<TResult>(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext)
-        {
 
-            // Mostly the same code as the parent class, no need to fix something that works
-       
-            var genericResult = AddressableAssetBuildResult.CreateResult<TResult>();
-            AddressablesPlayerBuildResult addrResult = genericResult as AddressablesPlayerBuildResult;
 
-            ExtractDataTask extractData = new ExtractDataTask();
-            List<CachedAssetState> carryOverCachedState = new List<CachedAssetState>();
-            if (!BuildUtility.CheckModifiedScenesAndAskToSave())
-                return CreateErrorResult<TResult>("Unsaved scenes", builderInput, aaContext);
-
-            AddInstanceAndSceneProvider(aaContext);
-
-            // Special treatment for the unity builtins
-            ProcessBuiltInBundle(aaContext);
-
-            var contentCatalogs = new List<ContentCatalogData>();
-            BuildContext buildContext = new BuildContext(aaContext, Log, new ReferenceIdentifier(m_bundleReferences, m_objectReferences, aaContext.Settings.ContiguousBundles));
-            foreach (ISchemaBuilder schemaBuilder in SchemaBuilders)
-            {
-                schemaBuilder.Build(
-                    buildContext,
-                    builderInput,
-                    aaContext,
-                    extractData,
-                    carryOverCachedState,
-                    addrResult);
-
-                var targets = AddressableReferencerDefaultObject.Settings.BuildTargetsForCatalog;
-                if (targets.LastOrDefault() != EditorUserBuildSettings.activeBuildTarget)
-                {
-                    targets.Remove(EditorUserBuildSettings.activeBuildTarget);
-                    targets.Add(EditorUserBuildSettings.activeBuildTarget);
-                }
-
-                foreach (var target in targets)
-                {
-                    SwapOutLocationsForTarget(aaContext, addrResult, target);
-
-                    // Pre process the build result to edit the catalog using the reference locations
-                    var schemaGeneratedCatalogs = schemaBuilder.GenerateCatalogs(builderInput, aaContext, addrResult);
-
-                    foreach (var contentCatalog in schemaGeneratedCatalogs)
-                    {
-                        if (contentCatalog == null)
-                        {
-                            Debug.Log($"No catalog generated for schema builder: {schemaBuilder.Name}");
-                            continue;
-                        }
-                        schemaBuilder.GenerateTypeStrippingInfo(builderInput, aaContext, contentCatalog);
-                        schemaBuilder.GenerateContentUpdate(builderInput, aaContext, extractData, carryOverCachedState, addrResult);
-                        contentCatalogs.Add(contentCatalog);
-
-                        if (AddressableReferencerDefaultObject.Settings.MoveCatalogToSharedBundleBuildPath)
-                        {
-                            CopyCatalog(aaContext, contentCatalog, builderInput, target);
-                        }                 
-                    }
-                }
-            }
-
-            if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
-                RemoveBuiltInAssetBundle(addrResult);
-
-            // sort catalogs to be deterministic
-            aaContext.runtimeData.CatalogLocations.Sort((a, b) => string.Compare(a.InternalId, b.InternalId, StringComparison.Ordinal));
-            var settingsPath = GenerateRuntimeSettingsFile(aaContext, builderInput);
-            genericResult.LocationCount = aaContext.locations.Count;
-            genericResult.OutputPath = settingsPath;
-
-            GenerateBuildLayout(extractData.BuildContext, aaContext.internalToOutputBundleName, contentCatalogs.ToArray(), addrResult);
-            return genericResult;
-    
-        }
-
-        /// <inheritdoc />
-        private void GenerateBuildLayout(IBuildContext buildContext,
-        Dictionary<string, string> bundleRenameMap,
-        ContentCatalogData[] contentCatalogs,
-        AddressablesPlayerBuildResult buildResult)
-        {
-            if (ProjectConfigData.GenerateBuildLayout && buildContext != null)
-            {
-                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
-                {
-                    progressTracker.UpdateTask("Generating Build Layout");
-                    using (Log.ScopedStep(LogLevel.Info, "Generate Build Layout"))
-                    {
-                        List<IBuildTask> tasks = new List<IBuildTask>();
-                        var buildLayoutTask = new BuildLayoutGenerationTask();
-                        buildContext.SetContextObject<IBuildLayoutParameters>(new BuildLayoutParameters(bundleRenameMap, contentCatalogs, buildResult));
-                        tasks.Add(buildLayoutTask);
-                        BuildTasksRunner.Run(tasks, buildContext);
-                    }
-                }
-            }
-        }
 
         /// <inheritdoc />
         protected override string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
@@ -162,7 +76,7 @@ namespace AddressableReferencer.Editor.Build {
                 {
                     if (!schemaBuilder.CanBuildSchema(schema))
                         continue;
-                    var errorString = schemaBuilder.ProcessGroupSchema(schema, assetGroup, aaContext);
+                    var errorString = schemaBuilder.ProcessGroupSchema(aaContext, schema);
                     if (errorString != string.Empty)
                         return errorString;
                 }
