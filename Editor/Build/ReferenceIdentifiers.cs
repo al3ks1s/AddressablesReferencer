@@ -18,8 +18,8 @@ namespace AddressableReferencer.Editor.Build
     public class ReferenceIdentifier : IDeterministicIdentifiers
     {
 
-        private Dictionary<ObjectIdentifier, long> m_objectReferences;
-        private Dictionary<string, string> m_bundleReferences;
+        public Dictionary<ObjectIdentifier, long> m_objectReferences;
+        public Dictionary<string, string> m_bundleReferences;
 
         private IDeterministicIdentifiers defaultIdentifier;
 
