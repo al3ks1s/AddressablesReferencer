@@ -8,7 +8,7 @@
   "changelogUrl": "https://github.com/al3ks1s/AddressablesReferencer/blob/main/CHANGELOG.md",
   "licensesUrl": "https://github.com/al3ks1s/AddressablesReferencer/blob/main/LICENCE.md",
   "dependencies": {
-    "com.unity.addressables": "3.1.0"
+    "com.unity.addressables": "4.0.1"
  },
   "keywords": [
     "asset",
@@ -22,7 +22,7 @@
   "repository": {
     "url": "https://github.com/al3ks1s/AddressablesReferencer",
     "type": "git",
-    "revision": "0.1.0"
+    "revision": "0.2.0"
   },
   "author": {
     "name": "Al3ks1s",
