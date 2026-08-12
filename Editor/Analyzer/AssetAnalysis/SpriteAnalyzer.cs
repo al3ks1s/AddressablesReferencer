@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
@@ -23,9 +22,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
                 return (null, null);
             }
 
-
             return (entry, mappings);
         }
-
     }
 }

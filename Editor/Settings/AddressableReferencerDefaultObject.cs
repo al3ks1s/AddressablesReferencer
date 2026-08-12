@@ -1,16 +1,12 @@
 using AddressableReferencer.Editor.Build;
-using System.IO;
-using UnityEditor;
 using UnityEditor.AddressableAssets;
-using UnityEditor.AddressableAssets.Build.DataBuilders;
-using UnityEditor.AddressableAssets.Settings;
+using UnityEditor;
 using UnityEngine;
 
 namespace AddressableReferencer.Editor.Settings
 {
     public class AddressableReferencerDefaultObject : ScriptableObject
     {
-
         public static string EnvBuildPath = System.Environment.GetEnvironmentVariable(kPathEnvName);
         public const string kPathEnvName = "AddressablesReferencerBuildPath";
 
@@ -200,6 +196,8 @@ namespace AddressableReferencer.Editor.Settings
 
             if (!AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().Contains("Addressable References.LoadPath"))
                 AddressableAssetSettingsDefaultObject.Settings.profileSettings.CreateValue("Addressable References.LoadPath", "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]");
+
+
         }
 
         /// <summary>
