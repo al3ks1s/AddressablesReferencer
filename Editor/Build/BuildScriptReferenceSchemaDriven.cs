@@ -32,6 +32,7 @@ namespace AddressableReferencer.Editor.Build {
                 new ContentDirectorySchemaBuilder(),
 #endif
                 new ReferenceSchemaBuilder(),
+                new SwapInternalIdSchemaBuilder(),
                 new CatalogExportSchemaBuilder(),
             };
         }

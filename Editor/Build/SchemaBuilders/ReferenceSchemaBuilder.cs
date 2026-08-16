@@ -34,7 +34,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
         private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
         private Dictionary<string, string> m_bundleReferences = new();
-        private Dictionary<string, AddressableReferenceEntry> m_internalNameToReferenceEntry = new();
 
         /// <summary>
         /// Repurposes the method to swap out the locations of reference bundles to the ones coming from the base game.
@@ -42,52 +41,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         /// <param name="aaContext"></param>
         /// <param name="addrResult"></param>
         public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
-        {
-
-            var referenceGroups = aaContext.Settings.groups.Where(g => g.IsReferenceGroup());
-            List<(ContentCatalogDataEntry, AddressableReferenceEntry)> referenceLocations = new();
-
-            foreach (var group in referenceGroups)
-            {
-                bool stripHashFromBundleLocation = false;
-                if (group.HasSchema<BundledAssetGroupSchema>())
-                    stripHashFromBundleLocation = group.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
-
-                foreach (var bundle in aaContext.assetGroupToBundles[group])
-                {
-                    var outputBundleName = aaContext.internalToOutputBundleName[bundle];
-                    var location = aaContext.locations.Find(l => l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString()).Contains(outputBundleName));
-
-                    m_internalNameToReferenceEntry.TryGetValue(bundle, out var referenceEntry);
-
-                    referenceLocations.Add((location, referenceEntry));
-                }
-            }
-
-            foreach (var entryPair in referenceLocations) 
-            {
-                var catalogLocation = entryPair.Item1;
-                var baseLocation = entryPair.Item2;
-
-                FormatLocationFromReferenceEntry(catalogLocation, baseLocation);
-            }
-
-            if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
-            {
-                bool stripHashFromBundleLocation = false;
-                if (aaContext.Settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>())
-                    stripHashFromBundleLocation = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
-
-                if (aaContext.internalToOutputBundleName.TryGetValue(IResourceLocationExtension.GetBuiltInBundleName(aaContext), out var outputBundleName))
-                {
-                    var builtinLocation = aaContext.locations.Find(l => l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString()).Contains(outputBundleName));
-                    Debug.Log(builtinLocation == null);
-                    if (builtinLocation != null)
-                        FormatLocationFromReferenceEntry(builtinLocation, AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry);
-
-                }
-            }
-        }
+        {}
         
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
@@ -140,7 +94,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             foreach (var entry in pSchema.Entries)
             {
                 m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
-                m_internalNameToReferenceEntry.TryAdd(entry.internalName, entry);
 
                 foreach (var map in entry.ObjectMappingDict)
                 {
@@ -166,25 +119,5 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 m_objectReferences.TryAdd(map.Key, map.Value);
             }
         }
-
-        private void FormatLocationFromReferenceEntry(ContentCatalogDataEntry catalogLocation, AddressableReferenceEntry referenceEntry)
-        {
-            catalogLocation.InternalId = referenceEntry.baseInternalId.Replace("{BuildTarget}", EditorUserBuildSettings.activeBuildTarget.ToString());
-
-            // Path handling for windows targets, the slashes of the primary key musn't be replaced by backslashes
-            if (IResourceLocationExtension.PathSeparatorForPlatform(EditorUserBuildSettings.activeBuildTarget) == '\\')
-            {
-                string pk = Regex.Replace(catalogLocation.Keys.First().ToString(), "_?[0-9a-f]{32}.bundle", "");
-                string bpk = pk.Replace("/", "\\");
-
-                catalogLocation.InternalId = catalogLocation.InternalId.Replace(bpk, pk);
-            }
-        }
-
-        static string StripHashFromBundleLocation(string hashedBundleLocation)
-        {
-            return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf('_')) + ".bundle";
-        }
-
     }
 }
