@@ -1,18 +1,7 @@
 using AddressableReferencer.Editor.Build.SchemaBuilders;
-using AddressableReferencer.Editor.Settings;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text.RegularExpressions;
-using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
-using UnityEditor.AddressableAssets.Settings.GroupSchemas;
-using UnityEditor.Build.Content;
-using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.AddressableAssets.ResourceLocators;
 
 namespace AddressableReferencer.Editor.Build {
 
@@ -27,11 +16,12 @@ namespace AddressableReferencer.Editor.Build {
         public override ISchemaBuilder[] CreateSchemaBuilders()
         {
             return new ISchemaBuilder[] {
+                new ReferenceSchemaBuilder(),
                 new BundledAssetSchemaBuilder(),
 #if ENABLE_CONTENT_DIRECTORIES
                 new ContentDirectorySchemaBuilder(),
 #endif
-                new ReferenceSchemaBuilder(),
+                new SwapInternalIdSchemaBuilder(),
                 new CatalogExportSchemaBuilder(),
             };
         }
