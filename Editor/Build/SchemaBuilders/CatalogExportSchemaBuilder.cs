@@ -30,20 +30,17 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         Dictionary<string, HashSet<AddressableAssetGroup>> m_buildPathToGroups = new();
         Dictionary<string, HashSet<BuildTarget>> m_buildPathToTargets = new();
 
-        ContentCatalogDataEntry monoscriptLocation;
-        ContentCatalogDataEntry builtinsLocation;
         List<ContentCatalogDataEntry> m_commonLocations = new();
-
-
         Dictionary<string, List<ContentCatalogDataEntry>> additionalCatalogs = new();
 
-
         public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) {}
+        
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
             return schema is ExportCatalogSchema;
         }
+        
         /// <inheritdoc/>
         public Dictionary<string, List<ContentCatalogDataEntry>> GenerateCatalogLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
         {
@@ -51,11 +48,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 return null;
             
             GatherCommonBundleLocations(aaContext);
-            monoscriptLocation = GetMonoscriptBundleLocation(aaContext);
-            builtinsLocation = GetBuiltinsBundleLocation(aaContext);
-
-            if (monoscriptLocation == null || builtinsLocation == null)
-                Debug.LogWarning($"Catalog Export Schema Builder : Could not find either Monoscript bundle or Builtins bundle location. Verify your asset structure.");
 
             foreach (var BuildPathVar in m_buildPathToGroups.Keys)
             {
@@ -81,6 +73,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             }
             return additionalCatalogs;
         }
+        
         /// <summary>
         /// Function used to copy the catalogs created by this schema builder to their respective BuildPaths. 
         /// The function is repurposed to bypass the need of rewriting parts of the main build logic.
@@ -102,10 +95,13 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 CopyCatalogToOutputPath(basePath, outputPath, "catalog");
             }
         }
+        
         /// <inheritdoc/>
         public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) {}
+        
         /// <inheritdoc/>
         public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) {}
+        
         /// <inheritdoc/>
         public string ProcessGroupSchema(AddressableAssetsBuildContext aaContext, AddressableAssetGroupSchema schema)
         {
@@ -141,6 +137,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                     if (group.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(aaContext.Settings) == pathVariable)
                         tGroups.Add(group);
 
+
             if (!m_buildPathToTargets.TryGetValue(pathVariable, out var tTargets))
                 tTargets = new();
             m_buildPathToTargets.TryAdd(pathVariable, tTargets);
@@ -164,7 +161,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 !kvp.Key.HasSchema<ExportCatalogSchema>() && (
                     kvp.Key.HasSchema<BundledAssetGroupSchema>() &&
                     !m_buildPathToGroups.ContainsKey(kvp.Key.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(aaContext.Settings))
-                )
+                ) || kvp.Key.IsDefaultGroup()
             ).Select(kpv => kpv.Key);
 
             foreach (var group in commonGroups)
@@ -197,28 +194,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
             return groupEntries;
         }
-        private ContentCatalogDataEntry GetMonoscriptBundleLocation(AddressableAssetsBuildContext aaContext) 
-        {
-            bool stripHashFromBundleLocation = false;
-            if (aaContext.Settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>())
-                stripHashFromBundleLocation = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
-
-            if(!aaContext.internalToOutputBundleName.TryGetValue(IResourceLocationExtension.GetMonoScriptBundleName(aaContext), out var outputBundleName))
-                return null;
-
-            return aaContext.locations.Find(l => l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString()).Contains(outputBundleName));
-        }
-        private ContentCatalogDataEntry GetBuiltinsBundleLocation(AddressableAssetsBuildContext aaContext)
-        {
-            bool stripHashFromBundleLocation = false;
-            if (aaContext.Settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>())
-                stripHashFromBundleLocation = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
-
-            if (!aaContext.internalToOutputBundleName.TryGetValue(IResourceLocationExtension.GetBuiltInBundleName(aaContext), out var outputBundleName))
-                return null;
-
-            return aaContext.locations.Find(l => l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString()).Contains(outputBundleName));
-        }
 
         // Catalog Creation
         private List<ContentCatalogDataEntry> CreateCatalogForGroupsTargetPair(AddressableAssetsBuildContext aaContext, List<ContentCatalogDataEntry> locations, string BuildPath, BuildTarget target)
@@ -232,44 +207,11 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
             foreach (var loc in m_commonLocations)
             {
-                newCatalog.Add(FormatCatalogEntryForBuildTarget(loc, target));
+                if (!newCatalog.Exists(l => l.Keys.Contains(loc.Keys.First())))
+                    newCatalog.Add(FormatCatalogEntryForBuildTarget(loc, target));
             }
 
-            if (monoscriptLocation != null && !locations.Contains(monoscriptLocation))
-                newCatalog.Add(FormatMonoscriptLocationForTarget(aaContext, BuildPath, target));
-
-            if (builtinsLocation != null && !locations.Contains(builtinsLocation))
-                newCatalog.Add(FormatBuiltInLocationForTarget(aaContext, BuildPath, target));
-
             return newCatalog;
-        }
-        private ContentCatalogDataEntry FormatMonoscriptLocationForTarget(AddressableAssetsBuildContext aaContext, string BuildPath, BuildTarget target)
-        {
-            aaContext.internalToOutputBundleName.TryGetValue(IResourceLocationExtension.GetMonoScriptBundleName(aaContext), out var monoscriptFileName);
-            string monoScriptInternalId = BuildPath.Replace(EditorUserBuildSettings.activeBuildTarget.ToString(), target.ToString()) + IResourceLocationExtension.PathSeparatorForPlatform(target) + monoscriptFileName;
-            
-            return new ContentCatalogDataEntry(
-                monoscriptLocation.ResourceType,
-                monoScriptInternalId,
-                monoscriptLocation.Provider,
-                monoscriptLocation.Keys,
-                monoscriptLocation.Dependencies,
-                monoscriptLocation.Data
-            );
-        }
-        private ContentCatalogDataEntry FormatBuiltInLocationForTarget(AddressableAssetsBuildContext aaContext, string BuildPath, BuildTarget target)
-        {
-            aaContext.internalToOutputBundleName.TryGetValue(IResourceLocationExtension.GetBuiltInBundleName(aaContext), out var builtInLFileName);
-            string builtInInternalId = BuildPath.Replace(EditorUserBuildSettings.activeBuildTarget.ToString(), target.ToString()) + IResourceLocationExtension.PathSeparatorForPlatform(target) + builtInLFileName;
-
-            return new ContentCatalogDataEntry(
-                builtinsLocation.ResourceType,
-                builtInInternalId,
-                builtinsLocation.Provider,
-                builtinsLocation.Keys,
-                builtinsLocation.Dependencies,
-                builtinsLocation.Data
-            );
         }
         private ContentCatalogDataEntry FormatCatalogEntryForBuildTarget(ContentCatalogDataEntry entry, BuildTarget target)
         {
@@ -302,7 +244,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 entry.Data
             );
         }
-
 
         private void CopyCatalogToOutputPath(string catalogBasePath, string outputFolder, string renameCatalogBaseVar = null) 
         {
