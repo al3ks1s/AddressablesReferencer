@@ -1,6 +1,10 @@
 using System;
 using System.IO;
 using UnityEditor;
+using UnityEditor.AddressableAssets.Build;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceLocations;
 
 public static class IResourceLocationExtension
@@ -68,6 +72,66 @@ public static class IResourceLocationExtension
             default:
                 return '/';
         }
+    }
+
+    
+    internal static string GetBuiltInBundleName(AddressableAssetsBuildContext aaContext)
+    {
+        return GetBuiltInBundleNamePrefix(aaContext) + $"{BuildScriptBase.BuiltInBundleBaseName}.bundle";
+    }
+    internal static string GetBuiltInBundleNamePrefix(AddressableAssetsBuildContext aaContext)
+    {
+        return GetBuiltInBundleNamePrefix(aaContext.Settings);
+    }
+    internal static string GetBuiltInBundleNamePrefix(AddressableAssetSettings settings)
+    {
+        string value = "";
+        switch (settings.BuiltInBundleNaming)
+        {
+            case BuiltInBundleNaming.DefaultGroupGuid:
+                value = settings.DefaultGroup.Guid;
+                break;
+            case BuiltInBundleNaming.ProjectName:
+                value = UnityEngine.Hash128.Compute(GetProjectName()).ToString();
+                break;
+            case BuiltInBundleNaming.Custom:
+                value = settings.BuiltInBundleCustomNaming;
+                break;
+        }
+
+        return value;
+    }
+
+    internal static string GetMonoScriptBundleName(AddressableAssetsBuildContext aaContext)
+    {
+        return GetMonoScriptBundleNamePrefix(aaContext) + "_monoscripts.bundle";
+    }
+    internal static string GetMonoScriptBundleNamePrefix(AddressableAssetsBuildContext aaContext)
+    {
+        return GetMonoScriptBundleNamePrefix(aaContext.Settings);
+    }
+    internal static string GetMonoScriptBundleNamePrefix(AddressableAssetSettings settings)
+    {
+        string value = null;
+        switch (settings.MonoScriptBundleNaming)
+        {
+            case MonoScriptBundleNaming.ProjectName:
+                value = Hash128.Compute(GetProjectName()).ToString();
+                break;
+            case MonoScriptBundleNaming.DefaultGroupGuid:
+                value = settings.DefaultGroup.Guid;
+                break;
+            case MonoScriptBundleNaming.Custom:
+                value = settings.MonoScriptBundleCustomNaming;
+                break;
+        }
+
+        return value;
+    }
+    
+    internal static string GetProjectName()
+    {
+        return new DirectoryInfo(Path.GetDirectoryName(Application.dataPath)).Name;
     }
 
 }

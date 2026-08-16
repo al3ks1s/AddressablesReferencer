@@ -54,7 +54,6 @@ namespace AddressableReferencer.Editor.Analyzer
                 progressTracker.UpdateTask($"Loading the catalog");
 
                 Debug.Log($"{catalogPath}");
-                Addressables.InitializeAsync().WaitForCompletion();
                 LocatorHandle = Addressables.LoadContentCatalogAsync(catalogPath);
                 Locator = LocatorHandle.WaitForCompletion();
 
