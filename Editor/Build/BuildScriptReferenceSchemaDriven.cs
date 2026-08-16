@@ -28,11 +28,11 @@ namespace AddressableReferencer.Editor.Build {
         {
             return new ISchemaBuilder[] {
                 new BundledAssetSchemaBuilder(),
-                new ReferenceSchemaBuilder(),
-                new CatalogExportSchemaBuilder(),
 #if ENABLE_CONTENT_DIRECTORIES
                 new ContentDirectorySchemaBuilder(),
 #endif
+                new ReferenceSchemaBuilder(),
+                new CatalogExportSchemaBuilder(),
             };
         }
     }
