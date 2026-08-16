@@ -72,6 +72,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                     string varName = catalog.Key.Split("-").First();
 
                     string outputPath = aaContext.Settings.profileSettings.GetValueByName(aaContext.Settings.activeProfileId, varName);
+                    outputPath = aaContext.Settings.profileSettings.EvaluateString(aaContext.Settings.activeProfileId, outputPath);
 
                     CopyCatalogToOutputPath(basePath, outputPath, "catalog");
                 }
