@@ -115,6 +115,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         public void SaveData()
         {
             SetDirty(true);
+            AssetDatabase.SaveAssetIfDirty(this);
         }
     }
 }

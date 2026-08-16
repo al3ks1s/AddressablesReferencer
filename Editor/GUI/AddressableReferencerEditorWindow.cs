@@ -309,14 +309,13 @@ namespace AddressableReferencer.Editor.GUI
         
         private void FastTest()
         {
-            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
-            Debug.Log($"{groups.Count()}");
-            foreach (var group in groups)
-            {
-                AddressableReferenceSchema schema = group.Schemas.Find(s => s is AddressableReferenceSchema) as AddressableReferenceSchema;
-                schema.SaveData();
-            }
-            EditorUtility.SetDirty(AddressableReferencerDefaultObject.Settings);
+            Debug.Log(string.Join(",",AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames()));
+            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BuildPath);
+            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(AddressableAssetSettingsDefaultObject.Settings));
+            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.Id);
+            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().SelectedPathPairIndex);
+            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().ElementAt(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().SelectedPathPairIndex));
+
         }
 
         // Processing
