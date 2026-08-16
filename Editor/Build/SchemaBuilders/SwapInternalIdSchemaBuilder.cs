@@ -27,39 +27,111 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             throw new System.NotImplementedException();
         }
 
+        Dictionary<string, AddressableReferenceEntry> m_internalNameToReferenceEntry = new();
+
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
-            throw new System.NotImplementedException();
+            return schema is AddressableReferenceSchema;
         }
 
         public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
+        { return new List<ContentCatalogData>(); }
+
+        public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) { }
+
+        public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
         {
-            throw new System.NotImplementedException();
+            var referenceGroups = aaContext.Settings.groups.Where(g => g.IsReferenceGroup() && g.GetSchema<BundledAssetGroupSchema>().IncludeInBuild && g.GetSchema<BundledAssetGroupSchema>().IsEnabled);
+            List<(ContentCatalogDataEntry, AddressableReferenceEntry)> referenceLocations = new();
+
+            foreach (var group in referenceGroups)
+            {
+                bool stripHashFromBundleLocation = false;
+                if (group.HasSchema<BundledAssetGroupSchema>())
+                    stripHashFromBundleLocation = group.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+
+                foreach (var bundle in aaContext.assetGroupToBundles[group])
+                {
+                    var outputBundleName = aaContext.internalToOutputBundleName[bundle];
+                    var location = aaContext.locations.Find(l => l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString()).Contains(outputBundleName));
+
+                    m_internalNameToReferenceEntry.TryGetValue(bundle, out var referenceEntry);
+
+                    referenceLocations.Add((location, referenceEntry));
+                }
+            }
+
+            foreach (var entryPair in referenceLocations)
+            {
+                var catalogLocation = entryPair.Item1;
+                var baseLocation = entryPair.Item2;
+
+                FormatLocationFromReferenceEntry(catalogLocation, baseLocation);
+            }
+
+            if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
+            {
+                bool stripHashFromBundleLocation = false;
+                if (aaContext.Settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>())
+                    stripHashFromBundleLocation = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+
+                if (aaContext.internalToOutputBundleName.TryGetValue(IResourceLocationExtension.GetBuiltInBundleName(aaContext), out var outputBundleName))
+                {
+                    var builtinLocation = aaContext.locations.Find(l => l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString()).Contains(outputBundleName));
+                    if (builtinLocation != null)
+                        FormatLocationFromReferenceEntry(builtinLocation, AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry);
+                }
+            }
         }
 
-        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
+        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) { }
+        public Dictionary<string, List<ContentCatalogDataEntry>> GenerateCatalogLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { return null; }
+        public void GenerateContentUpdate(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { }
+        
+        public string ProcessGroupSchema(AddressableAssetsBuildContext aaContext, AddressableAssetGroupSchema schema)
         {
-            throw new System.NotImplementedException();
+            if (!CanBuildSchema(schema))
+                return string.Empty;
+
+            var assetGroup = schema.Group;
+
+            if (schema is AddressableReferenceSchema)
+                return ProcessGroupReferenceSchema(schema as AddressableReferenceSchema, assetGroup, aaContext);
+
+            return string.Empty;
+        }
+        public string ProcessGroupReferenceSchema(AddressableReferenceSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
+        {
+            var pSchema = schema as AddressableReferenceSchema;
+
+            BundledAssetGroupSchema bundleSchema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
+
+            if (pSchema == null ||
+                bundleSchema == null ||
+                !pSchema.IsEnabled ||
+                !pSchema.ReferenceEnabled ||
+                !bundleSchema.IncludeInBuild ||
+                !bundleSchema.IsEnabled ||
+                !assetGroup.entries.Any())
+                return string.Empty;
+
+            foreach (var entry in pSchema.Entries)
+            {
+                m_internalNameToReferenceEntry.TryAdd(entry.internalName, entry);
+            }
+
+            return string.Empty;
         }
 
-        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog)
-        {
-            throw new System.NotImplementedException();
-        }
 
-        public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
+        static string StripHashFromBundleLocation(string hashedBundleLocation)
         {
-            throw new System.NotImplementedException();
+            return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf('_')) + ".bundle";
         }
-
-        public bool IsDataBuilt()
+        private void FormatLocationFromReferenceEntry(ContentCatalogDataEntry catalogLocation, AddressableReferenceEntry referenceEntry)
         {
-            throw new System.NotImplementedException();
+            catalogLocation.InternalId = referenceEntry.baseInternalId.Replace("{BuildTarget}", EditorUserBuildSettings.activeBuildTarget.ToString());
         }
-
-        public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
-        {
-            throw new System.NotImplementedException();
-        }
+    
     }
 }
