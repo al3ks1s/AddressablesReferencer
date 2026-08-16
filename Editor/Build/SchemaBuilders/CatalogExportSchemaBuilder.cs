@@ -48,10 +48,29 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
         public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
         {
-            throw new NotImplementedException();
-        }
+            if (m_buildPathToGroups.Count == 0)
+                return;
 
-        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog)
+            foreach (var catalog in additionalCatalogs)
+            {
+                string basePath = Path.Combine(Addressables.BuildPath, catalog.Key);
+                string varName = catalog.Key.Split("-").First();
+
+                string outputPath = aaContext.Settings.profileSettings.GetValueByName(aaContext.Settings.activeProfileId, varName);
+                outputPath = aaContext.Settings.profileSettings.EvaluateString(aaContext.Settings.activeProfileId, outputPath);
+
+                CopyCatalogToOutputPath(basePath, outputPath, "catalog");
+            }
+        }
+        
+        /// <inheritdoc/>
+        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) {}
+        
+        /// <inheritdoc/>
+        public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) {}
+        
+        /// <inheritdoc/>
+        public string ProcessGroupSchema(AddressableAssetsBuildContext aaContext, AddressableAssetGroupSchema schema)
         {
             throw new NotImplementedException();
         }
