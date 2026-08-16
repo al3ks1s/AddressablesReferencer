@@ -27,6 +27,7 @@ namespace AddressableReferencer.Editor.Build {
 #if ENABLE_CONTENT_DIRECTORIES
                 new ContentDirectorySchemaBuilder(),
 #endif
+                new ReferenceSchemaBuilder(),
                 new SwapInternalIdSchemaBuilder(),
                 new CatalogExportSchemaBuilder(),
             };
