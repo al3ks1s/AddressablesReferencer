@@ -129,10 +129,23 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
             return string.Empty;
         }
-
-        public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
+    
+        // Location identification
+        private void GatherCommonBundleLocations(AddressableAssetsBuildContext aaContext)
         {
-            throw new NotImplementedException();
+            var commonGroups = aaContext.assetGroupToBundles.Where(kvp =>
+                !kvp.Key.HasSchema<ExportCatalogSchema>() && (
+                    kvp.Key.HasSchema<BundledAssetGroupSchema>() &&
+                    !m_buildPathToGroups.ContainsKey(kvp.Key.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(aaContext.Settings))
+                )
+            ).Select(kpv => kpv.Key).ToList();
+
+            commonGroups.Add(aaContext.Settings.GetSharedBundleGroup());
+
+            foreach (var group in commonGroups)
+            {
+                m_commonLocations.AddRange(GatherAddressableGroupCatalogEntries(aaContext, group));
+            }
         }
         private List<ContentCatalogDataEntry> GatherAddressableGroupCatalogEntries(AddressableAssetsBuildContext aaContext, AddressableAssetGroup group)
         {
