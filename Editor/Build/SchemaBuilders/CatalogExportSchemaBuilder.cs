@@ -79,15 +79,155 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         {
             throw new NotImplementedException();
         }
-
-        public bool IsDataBuilt()
+        private List<ContentCatalogDataEntry> GatherAddressableGroupCatalogEntries(AddressableAssetsBuildContext aaContext, AddressableAssetGroup group)
         {
-            throw new NotImplementedException();
-        }
+            List<ContentCatalogDataEntry> groupEntries = new List<ContentCatalogDataEntry>();
+            
+            bool stripHashFromBundleLocation = false;
+
+            if (group.HasSchema<BundledAssetGroupSchema>())
+                stripHashFromBundleLocation = group.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+
+            var bundleLocations = aaContext.assetGroupToBundles[group]
+                .Select(b => aaContext.internalToOutputBundleName[b])
+                .Select(b => aaContext.locations.Find(l =>
+                        l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString() ).Contains(b)
+                    )
+                );
+            groupEntries.AddRange(bundleLocations.ToList());
+
+            var groupAssets = aaContext.GuidToCatalogLocation.Where(kpv => GUIDBelongsToAssetGroup(kpv.Key, group)).ToList();
+            foreach (var locations in groupAssets)
+            {
+                groupEntries.AddRange(locations.Value);
+            }
 
         public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
-            throw new NotImplementedException();
+            List<ContentCatalogDataEntry> newCatalog = new();
+
+            foreach (var loc in locations)
+            {
+                newCatalog.Add(FormatCatalogEntryForBuildTarget(loc, target));
+            }
+
+            foreach (var loc in m_commonLocations)
+            {
+                if (!newCatalog.Exists(l => l.Keys.Contains(loc.Keys.First())))
+                    newCatalog.Add(FormatCatalogEntryForBuildTarget(loc, target));
+            }
+
+            return newCatalog;
         }
+        private ContentCatalogDataEntry FormatCatalogEntryForBuildTarget(ContentCatalogDataEntry entry, BuildTarget target)
+        {
+
+            string internalId = string.Empty;
+            if (entry.Provider == "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider") {
+                internalId = entry.InternalId.Replace(EditorUserBuildSettings.activeBuildTarget.ToString(), target.ToString()).Replace('/', IResourceLocationExtension.PathSeparatorForPlatform(target));
+
+                // Path handling for windows targets, the slashes of the primary key musn't be replaced by backslashes
+                if (IResourceLocationExtension.PathSeparatorForPlatform(target) == '\\')
+                {
+                    string pk = Regex.Replace(entry.Keys.First().ToString(), "_?[0-9a-f]{32}.bundle", "");
+                    string bpk = pk.Replace("/", "\\");
+
+                    internalId = internalId.Replace(bpk, pk);
+                }
+            } 
+            else
+            {
+                internalId = entry.InternalId;
+            }
+
+            // Ensure the catalog entry is new so that it doesn't collide with other catalogs, especially internal id as it is formatted for build target.
+            return new ContentCatalogDataEntry(
+                entry.ResourceType,
+                internalId,
+                entry.Provider, 
+                entry.Keys,
+                entry.Dependencies,
+                entry.Data
+            );
+        }
+
+        private void CopyCatalogToOutputPath(string catalogBasePath, string outputFolder, string renameCatalogBaseVar = null) 
+        {
+
+            string filename = Path.GetFileName(catalogBasePath);
+            string filenamePrefix = filename.Split("-").First();
+
+            string binFile = catalogBasePath + ".bin";
+            string hashFile = catalogBasePath + ".hash";
+
+            if (!File.Exists(binFile))
+            {
+                Debug.LogError($"Catalog file couldn't be found at path {binFile}");
+                return;
+            }
+
+            if (!File.Exists(hashFile))
+            {
+                Debug.LogError($"Catalog hash file couldn't be found at path {hashFile}");
+                return;
+            }
+            CopyFileToDestinationWithTimestampIfDifferent(binFile, renameCatalogBaseVar == null ? Path.Join(outputFolder, Path.GetFileName(binFile)) : Path.Join(outputFolder, Path.GetFileName(binFile)).Replace(filenamePrefix, renameCatalogBaseVar));
+            CopyFileToDestinationWithTimestampIfDifferent(binFile, renameCatalogBaseVar == null ? Path.Join(outputFolder, Path.GetFileName(hashFile)) : Path.Join(outputFolder, Path.GetFileName(hashFile)).Replace(filenamePrefix, renameCatalogBaseVar));
+
+        }
+        static void CopyFileToDestinationWithTimestampIfDifferent(string srcPath, string destPath)
+        {
+            if (srcPath == destPath)
+                return;
+
+            DateTime time = File.GetLastWriteTime(srcPath);
+            DateTime destTime = File.Exists(destPath) ? File.GetLastWriteTime(destPath) : new DateTime();
+
+            if (destTime == time)
+                return;
+
+            var directory = Path.GetDirectoryName(destPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+            else if (File.Exists(destPath))
+                File.Delete(destPath);
+            File.Copy(srcPath, destPath);
+
+        }
+
+        static string StripHashFromBundleLocation(string hashedBundleLocation)
+        {
+            return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf('_')) + ".bundle";
+        }
+
+        private bool GUIDBelongsToAssetGroup(GUID guid, AddressableAssetGroup group)
+        {
+            foreach (var asset in group.entries)
+            {
+                if (asset.guid.Equals(guid.ToString()))
+                    return true;
+
+                if (asset.IsFolder)
+                    if (RecurseSubAssets(guid, asset))
+                        return true;
+            }
+
+            return false;
+        }
+        private bool RecurseSubAssets(GUID guid, AddressableAssetEntry folderEntry)
+        {
+            foreach (var asset in folderEntry.SubAssets)
+            {
+                if (asset.guid.Equals(guid.ToString()))
+                    return true;
+
+                if (asset.IsFolder)
+                    if (RecurseSubAssets(guid, asset))
+                        return true;
+            }
+
+            return false;
+        }
+
     }
 }
