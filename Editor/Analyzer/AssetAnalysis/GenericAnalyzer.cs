@@ -78,8 +78,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             if (AssetDatabase.GetMainAssetTypeAtPath(newPath).Name != assetType && !IsSubAssetRepresentation(assetExt, assetPath))
             {
-                // Debug.Log($"{assetPath} has mismatching types between editor and bundles, possible asset dependency detected. Editor:{AssetDatabase.GetMainAssetTypeAtPath(assetPath).Name} bundle:{assetExt.baseField.TypeName} Delegating to subAsset analyzer");
-
                 var subAnalyzer = new DependencyAnalyzer(m_parentAnalyzer);
                 return subAnalyzer.Analyze(pathId, assetPath);
             }
@@ -194,10 +192,8 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
             newPath = assetPath;
             assetGUID = AssetDatabase.AssetPathToGUID(assetPath, AssetPathToGUIDOptions.OnlyExistingAssets);
 
-            // var assetDep = new AssetDependencies(mgr, CABFile);
             if (assetGUID.Equals(""))
             {
-
                 var tempAssetGUID = SearchAssetMultipleFormat(assetPath, pathId);
 
                 if (tempAssetGUID.Equals(""))

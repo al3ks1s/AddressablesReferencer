@@ -43,14 +43,10 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             if (possibleAssets.Count == 0)
             {
-
                 // Create sub asset here if necessary
-
                 Debug.LogWarning($"No possible assets for {assetExt.baseField["m_Name"].AsString} of type {assetExt.baseField.TypeName}, check if it exists");
                 return (null, null);
             }
-
-            // Debug.Log($"Asset {assetExt.baseField["m_Name"].AsString} of {assetPath} is at path {possibleAssets[0]}");
 
             string assetGuid = AssetDatabase.GUIDFromAssetPath(possibleAssets[0]).ToString();
             entry = CreateOrGetAssetEntry(assetGuid);
