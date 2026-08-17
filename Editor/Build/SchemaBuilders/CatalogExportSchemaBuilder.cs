@@ -161,8 +161,10 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 !kvp.Key.HasSchema<ExportCatalogSchema>() && (
                     kvp.Key.HasSchema<BundledAssetGroupSchema>() &&
                     !m_buildPathToGroups.ContainsKey(kvp.Key.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(aaContext.Settings))
-                ) || kvp.Key.IsDefaultGroup()
-            ).Select(kpv => kpv.Key);
+                )
+            ).Select(kpv => kpv.Key).ToList();
+
+            commonGroups.Add(aaContext.Settings.GetSharedBundleGroup());
 
             foreach (var group in commonGroups)
             {
