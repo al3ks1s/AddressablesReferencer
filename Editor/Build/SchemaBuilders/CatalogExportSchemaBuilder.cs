@@ -1,10 +1,7 @@
-using AddressableReferencer.Editor.Settings;
-using AddressableReferencer.Editor.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
@@ -41,7 +38,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
         public bool IsDataBuilt()
         {
-            return true;
+            return true; 
         }
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
@@ -55,13 +52,12 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         /// <inheritdoc/>
         public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
         {
-            throw new NotImplementedException();
-        }
-
-        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
-        {
-            throw new NotImplementedException();
-        }
+            List<ContentCatalogData> catalogs = new();
+            
+            foreach (var catalogId in additionalCatalogs.Keys)
+            {
+                catalogs.Add(GenerateContentCatalog(catalogId, additionalCatalogs[catalogId], builderInput, aaContext, addrResult));
+            }
 
         public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog)
         {
@@ -157,8 +153,10 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 !kvp.Key.HasSchema<ExportCatalogSchema>() && (
                     kvp.Key.HasSchema<BundledAssetGroupSchema>() &&
                     !m_buildPathToGroups.ContainsKey(kvp.Key.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(aaContext.Settings))
-                ) || kvp.Key.IsDefaultGroup()
-            ).Select(kpv => kpv.Key);
+                )
+            ).Select(kpv => kpv.Key).ToList();
+
+            commonGroups.Add(aaContext.Settings.GetSharedBundleGroup());
 
             foreach (var group in commonGroups)
             {
