@@ -47,42 +47,6 @@ namespace AddressableReferencer.Editor.Settings
 
 
         [SerializeField]
-        private List<BuildTarget> m_buildTargetsForCatalog;
-        public List<BuildTarget> BuildTargetsForCatalog
-        {
-            get { 
-                if (m_buildTargetsForCatalog == null) 
-                    m_buildTargetsForCatalog = new List<BuildTarget>();
-
-                return m_buildTargetsForCatalog;
-            }
-        }
-        public bool IsBuildTargetActive(BuildTarget target)
-        {
-            return BuildTargetsForCatalog.Contains(target);
-        }
-        public void AddBuildTargetForCatalog(BuildTarget target)
-        {
-            if (!IsBuildTargetActive(target))
-                BuildTargetsForCatalog.Add(target);
-
-            Save();
-        }
-        public void RemoveBuildTargetForCatalog(BuildTarget target)
-        {
-            if (IsBuildTargetActive(target))
-                BuildTargetsForCatalog.Remove(target);
-
-            Save();
-        }
-        public void ClearBuildTargetForCatalogList()
-        {
-            BuildTargetsForCatalog.Clear();
-            Save();
-        }
-
-
-        [SerializeField]
         private AddressableReferenceEntry m_builtInBundleReferenceEntry;
         public AddressableReferenceEntry BuiltInBundleEntry
         {
