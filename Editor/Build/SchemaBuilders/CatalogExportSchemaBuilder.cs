@@ -388,11 +388,9 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             if (entry.Provider == "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider") {
                 internalId = entry.InternalId.Replace(EditorUserBuildSettings.activeBuildTarget.ToString(), target.ToString()).Replace("\\", "/").Replace('/', IResourceLocationExtension.PathSeparatorForPlatform(target));
                 
-                string pk = Regex.Replace(entry.Keys.First().ToString(), "_?[0-9a-f]{32}.bundle", "");
                 // Path handling for windows targets, the slashes of the primary key musn't be replaced by backslashes
                 if (IResourceLocationExtension.PathSeparatorForPlatform(target) == '\\')
                 {
-
                     if (internalId.Split(new string[] { "_assets_", "_scenes_" }, StringSplitOptions.None).Length > 1) { 
                     var pkj = internalId.Split(new string[] { "_assets_", "_scenes_" }, StringSplitOptions.None).Last();
 
@@ -400,8 +398,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
                     internalId = internalId.Replace(pkj, bpk);
                     }
-
-                    Debug.Log($"{entry.InternalId} \n{internalId}");
                 }
             } 
             else
