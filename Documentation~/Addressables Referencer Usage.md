@@ -117,13 +117,14 @@ Use the `Export Catalog To Build Location` schema to generate and copy a new cat
 ![alt text](Images/Example-Output-1.png)
 
 The following Addressable Group categories will be included in the catalog:
-1. The Addressable Group that the Export Schema belongs to.
-2. All the Addressable Groups that use the exact same `Build & Load Variable` (in the `BundledAssetGroupSchema`) whether these groups have an Export Catalog schema.
-3. The Addressable Group selected as the `Shared Group` in the Addressables Top Settings (Usually the default)
-4. All Addressable groups that do not have an Export Schema (Consider them "Common groups").
+1. The Addressable Group that the Export Schema belongs to. And all the Addressable Groups that use the exact same `Build & Load Variable` (in the `BundledAssetGroupSchema`) whether these groups have an Export Catalog schema or not.
+2. The Addressable Group selected as the `Shared Group` in the Addressables Top Settings (Usually the default)
+3. All Addressable groups that do not have an Export Schema (Consider them "Common groups").
 
 > [!CAUTION]
-> The hierarchy presented above means that "Common" addressable groups (4th level) **must not** depend on assets found in a group with a catalog export schema (1st & 2nd levels). Likewise, it is inadivsable for an asset in the Shared Group (3rd level) to depend on an asset above in the hierarchy.
+> Two Addressable groups with an Export Catalog Schema and a different `Build & Load Variable` won't be included in each other's catalog. Hence they **should not** depend on each other.
+> 
+> This also means that assets in the "Common" or Shared Groups **must not** depend on assets in a group that exports a catalog.
 
 > [!IMPORTANT] 
 > Due to the existence of the `monoscripts.bundle` and `unitybuiltinassets.bundle` that get built into the Shared group location, it will be necessary to **always** ship the Shared Group output to the game you want to mod either as a "Core Library" or as part of a main mod so that these bundles are available to all mods you build. This also means that all your mods must be updated at once when you do a release build to keep the data of these bundles consistent.

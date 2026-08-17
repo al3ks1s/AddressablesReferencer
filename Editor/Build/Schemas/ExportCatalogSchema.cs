@@ -134,34 +134,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             }
         }
 
-
-        public override string CanEnableSchema()
-        {
-
-            List<AddressableAssetGroup> otherGroupsWithExportCatalogSchema = 
-                AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => 
-                    g.HasSchema<ExportCatalogSchema>() && 
-                    !(g == this.Group) && 
-                    g.HasSchema<BundledAssetGroupSchema>() && 
-                    g.GetSchema<BundledAssetGroupSchema>().BuildPath == Group.GetSchema<BundledAssetGroupSchema>().BuildPath
-                ).ToList();
-
-
-            foreach (var otherGroup in otherGroupsWithExportCatalogSchema)
-            {
-                Debug.Log(otherGroup.Name);
-
-                var ogSchema = otherGroup.GetSchema<ExportCatalogSchema>();
-
-                if (ogSchema.EnableExport != EnableExport ||
-                    ogSchema.ExportForBuildTargets != ExportForBuildTargets)
-                    return $"Two or more Export Catalog Schemas pointing toward the same build path have different options enabled. The build script will merge them into the broadest possible options.";
-            }
-
-            return "";
-        }
-
-
         private GUIContent m_ExportEnabledGuiContent = new GUIContent("Generate Catalog", "Export additional catalogs for this group. The catalogs will be moved to the group's build path. Different Addressable groups exporting to the same Build Path will be merged into a single one.");
         private GUIContent m_ExportCatalogForBuildTarget = new GUIContent("Multiple Build Targets", "Option to allow the build pipeline to generate multiple catalogs at once for this group for different build targets.");
         private GUIContent m_ExportCatalogForBuildTargets = new GUIContent("Build Targets", "List of the BuildTargets for which a catalog will be generated. The currently active BuildTarget will always get a catalog.");
@@ -169,6 +141,32 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
         /// <inheritdoc/>
         public override void OnGUI()
         {
+
+            if (Group.HasSchema<BundledAssetGroupSchema>() && IsBuildVarExcluded(Group.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(Group.Settings)))
+            {
+                AddressablesGUIUtility.DrawErrorBoxWithLink(
+                    $"This group is using one of the forbidden Build Path variables (or <custom>) : [{Group.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(Group.Settings)}], consider using a specific Build Path Variable for it.",
+                    "Read more...",
+                    "https://github.com/al3ks1s/AddressablesReferencer/blob/main/Documentation~/Addressables%20Referencer%20Usage.md#export-catalog-to-build-location-schema");
+                GUILayout.Space(6);
+            }
+
+            if (!AreSchemaSynchronized())
+            {
+
+                var unSyncGroups = AddressableAssetSettingsDefaultObject.Settings.groups
+                    .Where(g => g.HasSchema<ExportCatalogSchema>() && g.HasSchema<BundledAssetGroupSchema>())
+                    .Where(g => g.GetSchema<BundledAssetGroupSchema>().BuildPath.Id == Group.GetSchema<BundledAssetGroupSchema>().BuildPath.Id)
+                    .ToList();
+
+
+                AddressablesGUIUtility.DrawErrorBoxWithLink(
+                    $"The groups [{string.Join(", ", unSyncGroups.Except(new List<AddressableAssetGroup>() { unSyncGroups.Last() }).Select(g => g.Name))} and {unSyncGroups.Last().Name}] have the same Build Path Variable but different export options. The build pipeline will merge them into the broadest possible options. Please synchronize your Export Schemas to avoid unexpected errors.",
+                    "Read more...",
+                    "https://github.com/al3ks1s/AddressablesReferencer/blob/main/Documentation~/Addressables%20Referencer%20Usage.md#export-catalog-to-build-location-schema");
+                GUILayout.Space(6);
+            }
+
             var exportEnabledBool = EditorGUILayout.Toggle(m_ExportEnabledGuiContent, m_enableExport);
             if (exportEnabledBool != m_enableExport)
             {
@@ -241,5 +239,30 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             SetDirty(true);
             AssetDatabase.SaveAssetIfDirty(this);
         }
+    
+
+        
+        public bool AreSchemaSynchronized()
+        {
+            var exportGroups = AddressableAssetSettingsDefaultObject.Settings.groups
+                .Where(g => g.HasSchema<ExportCatalogSchema>() && g.HasSchema<BundledAssetGroupSchema>())
+                .Where(g => g.GetSchema<BundledAssetGroupSchema>().BuildPath.Id == Group.GetSchema<BundledAssetGroupSchema>().BuildPath.Id);
+
+            if (exportGroups.Any(g => g.GetSchema<ExportCatalogSchema>().IsEnabled != IsEnabled))
+                return false;
+            if (exportGroups.Any(g => g.GetSchema<ExportCatalogSchema>().EnableExport != EnableExport))
+                return false;
+            if (exportGroups.Any(g => g.GetSchema<ExportCatalogSchema>().ExportForBuildTargets != ExportForBuildTargets))
+                return false;
+            if (exportGroups.Any(g => g.GetSchema<ExportCatalogSchema>().BuildTargetsForCatalog.Count != BuildTargetsForCatalog.Count))
+                return false;
+
+            foreach (var target in BuildTargetsForCatalog)
+                if (exportGroups.Any(g => !g.GetSchema<ExportCatalogSchema>().BuildTargetsForCatalog.Contains(target)))
+                    return false;
+
+            return true;
+        }
+    
     }
 }
