@@ -124,7 +124,7 @@ The following Addressable Group categories will be included in the catalog:
 4. All Addressable groups that do not have an Export Schema (Consider them "Common groups").
 
 > [!CAUTION]
-> The hierarchy presented above means that "Common" addressable groups (4th level) **must not** depend on assets found in a group with a catalog export schema (1st & 2nd levels). Likewise, it is unadivsable for an asset in the Shared Group (3rd level) to depend on an asset above in the hierarchy.
+> The hierarchy presented above means that "Common" addressable groups (4th level) **must not** depend on assets found in a group with a catalog export schema (1st & 2nd levels). Likewise, it is inadivsable for an asset in the Shared Group (3rd level) to depend on an asset above in the hierarchy.
 
 > [!IMPORTANT] 
 > Due to the existence of the `monoscripts.bundle` and `unitybuiltinassets.bundle` that get built into the Shared group location, it will be necessary to **always** ship the Shared Group output to the game you want to mod either as a "Core Library" or as part of a main mod so that these bundles are available to all mods you build. This also means that all your mods must be updated at once when you do a release build to keep the data of these bundles consistent.
