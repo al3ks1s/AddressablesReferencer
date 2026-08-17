@@ -187,7 +187,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 );
             groupEntries.AddRange(bundleLocations.ToList());
 
-            var groupAssets = aaContext.GuidToCatalogLocation.Where(kpv => group.GetAssetEntry(kpv.Key.ToString()) != null).ToList();
+            var groupAssets = aaContext.GuidToCatalogLocation.Where(kpv => GUIDBelongsToAssetGroup(kpv.Key, group)).ToList();
             foreach (var locations in groupAssets)
             {
                 groupEntries.AddRange(locations.Value);
@@ -293,6 +293,35 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         static string StripHashFromBundleLocation(string hashedBundleLocation)
         {
             return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf('_')) + ".bundle";
+        }
+
+        private bool GUIDBelongsToAssetGroup(GUID guid, AddressableAssetGroup group)
+        {
+            foreach (var asset in group.entries)
+            {
+                if (asset.guid.Equals(guid.ToString()))
+                    return true;
+
+                if (asset.IsFolder)
+                    if (RecurseSubAssets(guid, asset))
+                        return true;
+            }
+
+            return false;
+        }
+        private bool RecurseSubAssets(GUID guid, AddressableAssetEntry folderEntry)
+        {
+            foreach (var asset in folderEntry.SubAssets)
+            {
+                if (asset.guid.Equals(guid.ToString()))
+                    return true;
+
+                if (asset.IsFolder)
+                    if (RecurseSubAssets(guid, asset))
+                        return true;
+            }
+
+            return false;
         }
 
     }
