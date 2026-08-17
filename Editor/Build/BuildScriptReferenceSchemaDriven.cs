@@ -1,4 +1,5 @@
 using AddressableReferencer.Editor.Build.SchemaBuilders;
+using System;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
@@ -11,6 +12,11 @@ namespace AddressableReferencer.Editor.Build {
     /// </summary>
     public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
     {
+
+        protected override TResult BuildDataImplementation<TResult>(AddressablesDataBuilderInput builderInput)
+        {
+            throw new NotImplementedException("Building with references isn't supported on this branch of Addressables Referencer, please use either Addressables-3 or Addressables-4, look at the documentation to select a branch.");
+        }
 
         /// <inheritdoc />
         public override ISchemaBuilder[] CreateSchemaBuilders()
