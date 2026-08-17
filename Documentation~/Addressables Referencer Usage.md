@@ -111,9 +111,8 @@ This option should be set to `false` if the scenes and assets you build into bun
 #### Export Catalog To Build Location Schema
 
 Use the `Export Catalog To Build Location` schema to generate and copy a new catalog to the Addressable Group's `BuildPath` defined in the `BundledAssetGroupSchema`.
-
+![alt text](Images/Add-Export-Schema.png)
 ![alt text](Images/Export-Catalog-Schema.png)
-
 
 ![alt text](Images/Example-Output-1.png)
 
