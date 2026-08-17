@@ -20,25 +20,71 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
     {
         public string Name => "References";
 
-        public void Build(BuildContext buildContext, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
-        {
-            throw new System.NotImplementedException();
-        }
+        BuildContext m_buildContext;
+        ReferenceIdentifier m_referenceIdentifier;
 
+        private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
+        private Dictionary<string, string> m_bundleReferences = new();
+        
+        /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
-            throw new System.NotImplementedException();
+            return schema is AddressableReferenceSchema;
         }
+        public bool IsDataBuilt()
+        {
+            return true;
+        }
+        
+        /// <summary>
+        /// Repurposes the method to provide the build context the references to base bundles.
+        /// </summary>
+        /// <param name="aaContext"></param>
+        /// <param name="addrResult"></param>
+        public void Build(BuildContext buildContext,
+            AddressablesDataBuilderInput builderInput,
+            AddressableAssetsBuildContext aaContext,
+            ExtractDataTask extractData,
+            List<CachedAssetState> cachedState,
+            AddressablesPlayerBuildResult addrResult)
+        {
+            m_buildContext = buildContext;
 
-        public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
+            if (!m_buildContext.ContainsContextObject<IDeterministicIdentifiers>())
+            {
+                m_referenceIdentifier = new ReferenceIdentifier(m_bundleReferences, m_objectReferences, aaContext.Settings.ContiguousBundles);
+                m_buildContext.SetContextObject<IDeterministicIdentifiers>(m_referenceIdentifier);
+            }
+        }
+      
+        /// <inheritdoc/>
+        public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
         {
             throw new System.NotImplementedException();
         }
-
-        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
+        
+        /// <inheritdoc/>
+        public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
-            throw new System.NotImplementedException();
-        }
+            if (!CanBuildSchema(schema))
+                return string.Empty;
+
+            var pSchema = schema as AddressableReferenceSchema;
+
+            BundledAssetGroupSchema bundleSchema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
+
+            if (pSchema == null ||
+                bundleSchema == null ||
+                !pSchema.IsEnabled ||
+                !pSchema.ReferenceEnabled ||
+                !bundleSchema.IncludeInBuild ||
+                !bundleSchema.IsEnabled ||
+                !assetGroup.entries.Any())
+                return string.Empty;
+
+            foreach (var entry in pSchema.Entries)
+            {
+                m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
 
         public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog)
         {
@@ -55,9 +101,26 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             throw new System.NotImplementedException();
         }
 
-        public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
-        {
-            throw new System.NotImplementedException();
-        }
+
+
+        // Stubs for Interface compliance ---------------------------------------------------------
+        /// <inheritdoc/>
+        public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput,
+            AddressableAssetsBuildContext aaContext,
+            AddressablesPlayerBuildResult addrResult)
+        { return new(); } // Empty list 
+        /// <inheritdoc/>
+        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput,
+            AddressableAssetsBuildContext aaContext,
+            ExtractDataTask extractData,
+            List<CachedAssetState> cachedState,
+            AddressablesPlayerBuildResult addrResult)
+        { }
+        /// <inheritdoc/>
+        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput,
+            AddressableAssetsBuildContext aaContext,
+            ContentCatalogData contentCatalog)
+        { }
+
     }
 }
