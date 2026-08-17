@@ -43,6 +43,11 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
 
         }
 
+        public static List<string> ExportCatalogExclusions = new() { "Local.BuildPath", "Remote.BuildPath", "Addressable References.BuildPath", string.Empty };
+        public static bool IsBuildVarExcluded(string name)
+        {
+            return ExportCatalogExclusions.Contains(name);
+        }
 
         [SerializeField]
         private bool m_enableExport = true;
