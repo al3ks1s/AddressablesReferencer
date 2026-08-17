@@ -21,7 +21,6 @@ namespace AddressableReferencer.Editor.Build
 
         public override BuildScriptSchemaDriven CreateSchemaDrivenBuildScript()
         {
-            //throw new NotImplementedException("Building with references isn't supported on this branch of Addressables Referencer, please use either Addressables-3 or Addressables-4");
             return CreateInstance<BuildScriptReferenceSchemaDriven>();
         }
 
