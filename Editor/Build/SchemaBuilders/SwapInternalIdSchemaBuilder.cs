@@ -22,6 +22,16 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
     {
         public string Name => "Swap Internal Id";
 
+
+        Dictionary<string, AddressableReferenceEntry> m_internalNameToReferenceEntry = new();
+        
+        public bool IsDataBuilt() { return true; }
+        public bool CanBuildSchema(AddressableAssetGroupSchema schema)
+        {
+            return schema is AddressableReferenceSchema;
+        }
+
+
         public void Build(BuildContext buildContext, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
         {
             throw new System.NotImplementedException();
@@ -37,17 +47,23 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             throw new System.NotImplementedException();
         }
 
-        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
-        {
-            throw new System.NotImplementedException();
+            if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
+            {
+                bool stripHashFromBundleLocation = false;
+                if (aaContext.Settings.DefaultGroup.HasSchema<BundledAssetGroupSchema>())
+                    stripHashFromBundleLocation = aaContext.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+
+                if (aaContext.internalToOutputBundleName.TryGetValue(IResourceLocationExtension.GetBuiltInBundleName(aaContext), out var outputBundleName))
+                {
+                    var builtinLocation = aaContext.locations.Find(l => l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString()).Contains(outputBundleName));
+                    if (builtinLocation != null)
+                        FormatLocationFromReferenceEntry(builtinLocation, AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry);
+                }
+            }
         }
 
-        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog)
-        {
-            throw new System.NotImplementedException();
-        }
 
-        public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
+        public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
         {
             throw new System.NotImplementedException();
         }
@@ -61,5 +77,16 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         {
             throw new System.NotImplementedException();
         }
+
+
+
+
+        // Stubs for Interface compliance ---------------------------------------------------------
+        public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder) { }
+        public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
+        { return new List<ContentCatalogData>(); }
+        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult) { }
+        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) { }
+
     }
 }
