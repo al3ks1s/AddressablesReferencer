@@ -225,7 +225,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             groupEntries.AddRange(bundleLocations.ToList());
 
             var groupAssets = aaContext.GuidToCatalogLocation.Where(kpv => GUIDBelongsToAssetGroup(kpv.Key, group)).ToList();
-            Debug.Log($"Group:{group.Name} has {groupAssets.Count} assets over {aaContext.GuidToCatalogLocation.Count} guidToLocation");
 
             foreach (var locations in groupAssets)
             {
