@@ -194,40 +194,6 @@ namespace AddressableReferencer.Editor.GUI
                     Settings.UseBaseGameBuiltinAssets = !Settings.UseBaseGameBuiltinAssets;
                 });
 
-                menu.AddItem(new GUIContent("Build Options/Copy The Catalog To The Shared Group Build Path", "Will only affect the reference script."), Settings.MoveCatalogToSharedBundleBuildPath, () => {
-                    Settings.MoveCatalogToSharedBundleBuildPath = !Settings.MoveCatalogToSharedBundleBuildPath;
-                });
-
-                menu.AddItem(new GUIContent($"Build Options/Create a Catalog For Build Target/Enable All", "Ensure the game you want to reference uses the build targets you select."), false, () => {
-                    foreach (var targetValue in Enum.GetValues(typeof(BuildTarget)))
-                    {
-                        if (BuildPipeline.IsBuildTargetSupported(EditorUserBuildSettings.selectedBuildTargetGroup, (BuildTarget)targetValue))
-                        {
-                            Settings.AddBuildTargetForCatalog((BuildTarget)targetValue);
-                        }
-                    }
-                });
-
-                foreach (var targetValue in Enum.GetValues(typeof(BuildTarget)))
-                {
-                    if (BuildPipeline.IsBuildTargetSupported(EditorUserBuildSettings.selectedBuildTargetGroup, (BuildTarget)targetValue)) { 
-                        menu.AddItem(new GUIContent($"Build Options/Create a Catalog For Build Target/{Enum.GetName(typeof(BuildTarget), targetValue)}", "Ensure the game you want to reference uses the build targets you select."), Settings.IsBuildTargetActive((BuildTarget)targetValue), () => {
-                            if (Settings.IsBuildTargetActive((BuildTarget)targetValue))
-                            {
-                                Settings.RemoveBuildTargetForCatalog((BuildTarget)targetValue);
-                            } 
-                            else
-                            {
-                                Settings.AddBuildTargetForCatalog((BuildTarget)targetValue);
-                            }
-                        });
-                    }
-                }
-
-                menu.AddItem(new GUIContent($"Build Options/Create a Catalog For Build Target/Disable All", "Ensure the game you want to reference uses the build targets you select."), false, () => {
-                    Settings.ClearBuildTargetForCatalogList();
-                });
-
                 menu.AddSeparator(string.Empty);
                 menu.AddItem(new GUIContent("Build Addressables Bundles With Referencer Script"), false, BuildReferenceBundles);
                 
