@@ -30,11 +30,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             return schema is AddressableReferenceSchema;
         }
 
-        public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
-        { return new List<ContentCatalogData>(); }
-
-        public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) { }
-
         public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
         {
             var referenceGroups = aaContext.Settings.groups.Where(g => g.IsReferenceGroup() && g.GetSchema<BundledAssetGroupSchema>().IncludeInBuild && g.GetSchema<BundledAssetGroupSchema>().IsEnabled);
@@ -79,10 +74,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 }
             }
         }
-
-        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) { }
-        public Dictionary<string, List<ContentCatalogDataEntry>> GenerateCatalogLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { return null; }
-        public void GenerateContentUpdate(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { }
         
         public string ProcessGroupSchema(AddressableAssetsBuildContext aaContext, AddressableAssetGroupSchema schema)
         {
@@ -119,7 +110,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             return string.Empty;
         }
 
-
         static string StripHashFromBundleLocation(string hashedBundleLocation)
         {
             return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf('_')) + ".bundle";
@@ -128,6 +118,13 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         {
             catalogLocation.InternalId = referenceEntry.baseInternalId.Replace("{BuildTarget}", EditorUserBuildSettings.activeBuildTarget.ToString());
         }
-    
+
+
+        // Stubs for Interface Compliance ---------------------------------------------------------
+        public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) { }
+        public Dictionary<string, List<ContentCatalogDataEntry>> GenerateCatalogLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { return null; }
+        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) { }
+        public void GenerateContentUpdate(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { }
+
     }
 }

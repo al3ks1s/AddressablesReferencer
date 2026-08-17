@@ -35,36 +35,25 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
         private Dictionary<string, string> m_bundleReferences = new();
 
-        public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) {}
-        
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
             return schema is AddressableReferenceSchema;
         }
-        
-        /// <inheritdoc/>
-        public Dictionary<string, List<ContentCatalogDataEntry>> GenerateCatalogLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { return null; }
-        
-        /// <inheritdoc/>
-        public void GenerateContentUpdate(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) {}
-        
-        /// <inheritdoc/>
-        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) {}
-        
         /// <inheritdoc/>
         public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder)
         {
             m_buildContext = buildContext;
 
-            if (!m_buildContext.ContainsContextObject<IDeterministicIdentifiers>()) {
+            if (!m_buildContext.ContainsContextObject<IDeterministicIdentifiers>())
+            {
                 m_referenceIdentifier = new ReferenceIdentifier(m_bundleReferences, m_objectReferences, aaContext.Settings.ContiguousBundles);
                 m_buildContext.SetContextObject<IDeterministicIdentifiers>(m_referenceIdentifier);
             }
 
             ProcessBuiltInBundle(aaContext);
         }
-        
+                
         /// <inheritdoc/>
         public string ProcessGroupSchema(AddressableAssetsBuildContext aaContext, AddressableAssetGroupSchema schema)
         {
@@ -113,5 +102,17 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 m_objectReferences.TryAdd(map.Key, map.Value);
             }
         }
+
+
+        // Stubs for Interface Compliance ---------------------------------------------------------
+        /// <inheritdoc/>
+        public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { }
+        /// <inheritdoc/>
+        public Dictionary<string, List<ContentCatalogDataEntry>> GenerateCatalogLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { return null; }
+        /// <inheritdoc/>
+        public void GenerateContentUpdate(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { }
+        /// <inheritdoc/>
+        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) { }
+
     }
 }

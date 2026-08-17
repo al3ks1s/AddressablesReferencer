@@ -33,7 +33,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         List<ContentCatalogDataEntry> m_commonLocations = new();
         Dictionary<string, List<ContentCatalogDataEntry>> additionalCatalogs = new();
 
-        public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) {}
         
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
@@ -98,12 +97,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         }
         
         /// <inheritdoc/>
-        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) {}
-        
-        /// <inheritdoc/>
-        public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) {}
-        
-        /// <inheritdoc/>
         public string ProcessGroupSchema(AddressableAssetsBuildContext aaContext, AddressableAssetGroupSchema schema)
         {
             if (!CanBuildSchema(schema))
@@ -124,8 +117,14 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 return string.Empty;
 
             string pathVariable = bundleSchema.BuildPath.GetName(aaContext.Settings);
+            // Some variables are not supported
+            if (ExportCatalogSchema.IsBuildVarExcluded(pathVariable))
+            {
+                Debug.LogWarning($"A catalog export was requested for group {assetGroup.Name} but its BuildPath is excluded: {pathVariable}");
+                return string.Empty;
+            }
+            
             m_CatalogExportGroups.Add(assetGroup);
-
 
             if (!m_buildPathToGroups.TryGetValue(pathVariable, out var tGroups))
                 tGroups = new();
@@ -249,6 +248,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             );
         }
 
+        // Catalog Export
         private void CopyCatalogToOutputPath(string catalogBasePath, string outputFolder, string renameCatalogBaseVar = null) 
         {
 
@@ -293,11 +293,11 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
         }
 
+        // Various Utilities
         static string StripHashFromBundleLocation(string hashedBundleLocation)
         {
             return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf('_')) + ".bundle";
         }
-
         private bool GUIDBelongsToAssetGroup(GUID guid, AddressableAssetGroup group)
         {
             foreach (var asset in group.entries)
@@ -326,6 +326,13 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
             return false;
         }
+
+
+
+        // Stubs for Interface Compliance ---------------------------------------------------------
+        public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) { }
+        public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { }
+        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) { }
 
     }
 }
