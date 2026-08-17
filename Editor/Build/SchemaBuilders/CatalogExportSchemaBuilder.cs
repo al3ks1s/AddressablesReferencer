@@ -31,7 +31,16 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
         public string Name => "Catalog Export";
 
-        public void Build(BuildContext buildContext, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
+        List<AddressableAssetGroup> m_CatalogExportGroups = new();
+        Dictionary<string, HashSet<AddressableAssetGroup>> m_buildPathToGroups = new();
+        Dictionary<string, HashSet<BuildTarget>> m_buildPathToTargets = new();
+
+        List<ContentCatalogDataEntry> m_commonLocations = new();
+        Dictionary<string, List<ContentCatalogDataEntry>> additionalCatalogs = new();
+
+        
+        /// <inheritdoc/>
+        public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
             throw new NotImplementedException();
         }
@@ -64,15 +73,61 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         }
         
         /// <inheritdoc/>
-        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) {}
-        
-        /// <inheritdoc/>
-        public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) {}
-        
-        /// <inheritdoc/>
         public string ProcessGroupSchema(AddressableAssetsBuildContext aaContext, AddressableAssetGroupSchema schema)
         {
-            throw new NotImplementedException();
+            if (!CanBuildSchema(schema))
+                return string.Empty;
+
+            var pSchema = schema as ExportCatalogSchema;
+            var assetGroup = pSchema.Group;
+
+            BundledAssetGroupSchema bundleSchema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
+
+            if (pSchema == null ||
+                bundleSchema == null ||
+                !pSchema.IsEnabled ||
+                !pSchema.EnableExport ||
+                !bundleSchema.IncludeInBuild ||
+                !bundleSchema.IsEnabled ||
+                !assetGroup.entries.Any())
+                return string.Empty;
+
+            string pathVariable = bundleSchema.BuildPath.GetName(aaContext.Settings);
+            // Some variables are not supported
+            if (ExportCatalogSchema.IsBuildVarExcluded(pathVariable))
+            {
+                Debug.LogWarning($"A catalog export was requested for group {assetGroup.Name} but its BuildPath is excluded: {pathVariable}");
+                return string.Empty;
+            }
+            
+            m_CatalogExportGroups.Add(assetGroup);
+
+            if (!m_buildPathToGroups.TryGetValue(pathVariable, out var tGroups))
+                tGroups = new();
+            m_buildPathToGroups.TryAdd(pathVariable, tGroups);
+            tGroups.Add(assetGroup);
+
+            // Preemptively add all the groups with the same Build path var in case the user forgets to enable the schema on the group
+            foreach (var group in aaContext.Settings.groups)
+                if (group.HasSchema<BundledAssetGroupSchema>())
+                    if (group.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(aaContext.Settings) == pathVariable)
+                        tGroups.Add(group);
+
+
+            if (!m_buildPathToTargets.TryGetValue(pathVariable, out var tTargets))
+                tTargets = new();
+            m_buildPathToTargets.TryAdd(pathVariable, tTargets);
+            
+            if (pSchema.ExportForBuildTargets) { 
+                foreach (var target in pSchema.BuildTargetsForCatalog)
+                   tTargets.Add(target);
+            }
+            else
+            {
+                tTargets.Add(EditorUserBuildSettings.activeBuildTarget);
+            }
+
+            return string.Empty;
         }
 
         public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
@@ -154,6 +209,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             );
         }
 
+        // Catalog Export
         private void CopyCatalogToOutputPath(string catalogBasePath, string outputFolder, string renameCatalogBaseVar = null) 
         {
 
@@ -198,11 +254,11 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
         }
 
+        // Various Utilities
         static string StripHashFromBundleLocation(string hashedBundleLocation)
         {
             return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf('_')) + ".bundle";
         }
-
         private bool GUIDBelongsToAssetGroup(GUID guid, AddressableAssetGroup group)
         {
             foreach (var asset in group.entries)
@@ -231,6 +287,13 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
             return false;
         }
+
+
+
+        // Stubs for Interface Compliance ---------------------------------------------------------
+        public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder) { }
+        public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) { }
+        public void GenerateTypeStrippingInfo(AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog) { }
 
     }
 }
