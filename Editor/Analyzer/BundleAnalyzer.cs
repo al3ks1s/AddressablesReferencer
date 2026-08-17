@@ -137,8 +137,6 @@ namespace AddressableReferencer.Editor.Analyzer
             referenceEntry.cabName = CABFile.name;
             referenceEntry.baseInternalId = location.ReverseBundleInternalId();
             referenceEntry.primaryKey = location.PrimaryKey;
-                // location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
-
         }
         public void LoadMonoscript()
         {
@@ -209,10 +207,7 @@ namespace AddressableReferencer.Editor.Analyzer
                         var assetExt = mgr.GetExtAsset(CABFile, 0, pathId, true);
 
                         progressTracker.UpdateInfo($"({++counter}/{AssetCount}) - Processing: {Path.GetFileName(path)}");
-
-                        // var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.baseField.TypeName, this);
                         var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.info.TypeId, this);
-
                         var kvp = analyzer.Analyze(pathId, path);
 
                         if (kvp.Item1 != null)
@@ -221,7 +216,6 @@ namespace AddressableReferencer.Editor.Analyzer
                         if (kvp.Item2 != null)
                         {
                             referenceEntry.m_ObjectMapping.AddRange(kvp.Item2);
-
                         }
                     }
                 }
@@ -230,7 +224,6 @@ namespace AddressableReferencer.Editor.Analyzer
 
         public void GenerateBundleName()
         {
-
             if (entries.Count == 0) return;
 
             string groupHash = CalculateGroupHash(schema.InternalBundleIdMode, assetGroup, entries);
@@ -329,8 +322,7 @@ namespace AddressableReferencer.Editor.Analyzer
             referenceEntry.cabName = CABFile.name;
             referenceEntry.baseInternalId = location.ReverseBundleInternalId();
             referenceEntry.primaryKey = location.PrimaryKey;
-            // location.InternalId.Replace(UnityEngine.AddressableAssets.Addressables.RuntimePath, "{UnityEngine.AddressableAssets.Addressables.RuntimePath}");
-
+           
         }
         public void ProcessBundle()
         {
@@ -343,7 +335,6 @@ namespace AddressableReferencer.Editor.Analyzer
             var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
 
             AnalyzeAssets();
-            // GenerateBundleName();
 
             referenceEntry.isDone = true;
 

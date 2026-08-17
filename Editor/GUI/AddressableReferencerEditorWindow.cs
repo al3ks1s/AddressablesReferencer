@@ -173,7 +173,7 @@ namespace AddressableReferencer.Editor.GUI
 
                 menu.AddItem(new GUIContent("Set StreamingAssets Folder"), false, SelectStreamingAssetsPath);
                 menu.AddItem(new GUIContent("Replace Assets"), false, ReplaceAssetReferences);
-                menu.AddItem(new GUIContent("Fast Test Stuff"), false, FastTest);
+                // menu.AddItem(new GUIContent("Fast Test Stuff"), false, FastTest);
                 menu.AddSeparator(string.Empty);
 
                 menu.AddItem(new GUIContent("Reset Addressables Referencer Settings"), false, ResetReferencerSetup);
@@ -239,7 +239,6 @@ namespace AddressableReferencer.Editor.GUI
                     m_entryTree?.Search(searchString);
                 }
             }
-            //*/
         }
 
         // ObjectTree related stuff
@@ -275,13 +274,7 @@ namespace AddressableReferencer.Editor.GUI
         
         private void FastTest()
         {
-            Debug.Log(string.Join(",",AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames()));
-            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BuildPath);
-            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.GetName(AddressableAssetSettingsDefaultObject.Settings));
-            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().BuildPath.Id);
-            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().SelectedPathPairIndex);
-            Debug.Log(AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().ElementAt(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup.GetSchema<BundledAssetGroupSchema>().SelectedPathPairIndex));
-
+            
         }
 
         // Processing
@@ -355,7 +348,6 @@ namespace AddressableReferencer.Editor.GUI
             m_analyzer.ProcessGroups();
 
             m_entryTree.Reload();
-
         }
         
         private void ReplaceAssetReferences()
@@ -366,7 +358,6 @@ namespace AddressableReferencer.Editor.GUI
         // Build
         private void BuildReferenceBundles()
         {
-
             string BuildScriptPath = AddressableAssetSettingsDefaultObject.Settings.DataBuilderFolder + "/" + typeof(BuildScriptReferenceMode).Name + ".asset";
             string guid = AssetDatabase.AssetPathToGUID(BuildScriptPath, AssetPathToGUIDOptions.OnlyExistingAssets);
 
