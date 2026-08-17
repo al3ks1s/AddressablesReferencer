@@ -53,11 +53,9 @@ namespace AddressableReferencer.Editor.Analyzer
 
                 progressTracker.UpdateTask($"Loading the catalog");
 
-                Debug.Log($"{catalogPath}");
+                Addressables.InitializeAsync().WaitForCompletion();
                 LocatorHandle = Addressables.LoadContentCatalogAsync(catalogPath);
                 Locator = LocatorHandle.WaitForCompletion();
-
-                Debug.Log($"{LocatorHandle.OperationException}");
 
                 bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
                 monoscript = TryFindMonoscriptBundle();

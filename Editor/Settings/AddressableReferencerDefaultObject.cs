@@ -177,7 +177,6 @@ namespace AddressableReferencer.Editor.Settings
              
             if (!string.IsNullOrEmpty(guid))
             {
-                
                 var a = AssetDatabase.LoadAssetAtPath<BuildScriptReferenceMode>(BuildScriptPath);
                 var builderIndex = AddressableAssetSettingsDefaultObject.Settings.DataBuilders.IndexOf(a);
 
@@ -196,7 +195,6 @@ namespace AddressableReferencer.Editor.Settings
 
             if (!AddressableAssetSettingsDefaultObject.Settings.profileSettings.GetVariableNames().Contains("Addressable References.LoadPath"))
                 AddressableAssetSettingsDefaultObject.Settings.profileSettings.CreateValue("Addressable References.LoadPath", "{UnityEngine.AddressableAssets.Addressables.RuntimePath}/[BuildTarget]");
-
 
         }
 
