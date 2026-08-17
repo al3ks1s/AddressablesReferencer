@@ -35,13 +35,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
         private Dictionary<string, string> m_bundleReferences = new();
 
-        /// <summary>
-        /// Repurposes the method to swap out the locations of reference bundles to the ones coming from the base game.
-        /// </summary>
-        /// <param name="aaContext"></param>
-        /// <param name="addrResult"></param>
-        public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
-        {}
+        public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) {}
         
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)

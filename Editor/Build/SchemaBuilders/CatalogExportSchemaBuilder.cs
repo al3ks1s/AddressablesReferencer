@@ -219,15 +219,18 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
             string internalId = string.Empty;
             if (entry.Provider == "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider") {
-                internalId = entry.InternalId.Replace(EditorUserBuildSettings.activeBuildTarget.ToString(), target.ToString()).Replace('/', IResourceLocationExtension.PathSeparatorForPlatform(target));
-
+                internalId = entry.InternalId.Replace(EditorUserBuildSettings.activeBuildTarget.ToString(), target.ToString()).Replace("\\", "/").Replace('/', IResourceLocationExtension.PathSeparatorForPlatform(target));
+                
                 // Path handling for windows targets, the slashes of the primary key musn't be replaced by backslashes
                 if (IResourceLocationExtension.PathSeparatorForPlatform(target) == '\\')
                 {
-                    string pk = Regex.Replace(entry.Keys.First().ToString(), "_?[0-9a-f]{32}.bundle", "");
-                    string bpk = pk.Replace("/", "\\");
+                    if (internalId.Split(new string[] { "_assets_", "_scenes_" }, StringSplitOptions.None).Length > 1) { 
+                    var pkj = internalId.Split(new string[] { "_assets_", "_scenes_" }, StringSplitOptions.None).Last();
 
-                    internalId = internalId.Replace(bpk, pk);
+                    string bpk = pkj.Replace("\\", "/");
+
+                    internalId = internalId.Replace(pkj, bpk);
+                    }
                 }
             } 
             else
