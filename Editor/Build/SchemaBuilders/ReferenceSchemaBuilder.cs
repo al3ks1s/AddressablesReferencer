@@ -25,10 +25,19 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
         private Dictionary<ObjectIdentifier, long> m_objectReferences = new();
         private Dictionary<string, string> m_bundleReferences = new();
-        private Dictionary<string, AddressableReferenceEntry> m_internalNameToReferenceEntry = new();
-
+        
+        /// <inheritdoc/>
+        public bool CanBuildSchema(AddressableAssetGroupSchema schema)
+        {
+            return schema is AddressableReferenceSchema;
+        }
+        public bool IsDataBuilt()
+        {
+            return true;
+        }
+        
         /// <summary>
-        /// Repurposes the method to swap out the locations of reference bundles to the ones coming from the base game.
+        /// Repurposes the method to provide the build context the references to base bundles.
         /// </summary>
         /// <param name="aaContext"></param>
         /// <param name="addrResult"></param>
@@ -47,30 +56,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 m_buildContext.SetContextObject<IDeterministicIdentifiers>(m_referenceIdentifier);
             }
         }
-
-        /// <inheritdoc/>
-        public bool CanBuildSchema(AddressableAssetGroupSchema schema)
-        {
-            return schema is AddressableReferenceSchema;
-        }
-        
-        /// <inheritdoc/>
-        public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput,
-            AddressableAssetsBuildContext aaContext,
-            AddressablesPlayerBuildResult addrResult) { return new(); } // Empty list 
-        
-        /// <inheritdoc/>
-        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput,
-            AddressableAssetsBuildContext aaContext,
-            ExtractDataTask extractData,
-            List<CachedAssetState> cachedState,
-            AddressablesPlayerBuildResult addrResult) {}
-        
-        /// <inheritdoc/>
-        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput,
-            AddressableAssetsBuildContext aaContext,
-            ContentCatalogData contentCatalog) {}
-        
+      
         /// <inheritdoc/>
         public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
         {
@@ -99,7 +85,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             foreach (var entry in pSchema.Entries)
             {
                 m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
-                m_internalNameToReferenceEntry.TryAdd(entry.internalName, entry);
 
                 foreach (var map in entry.ObjectMappingDict)
                 {
@@ -127,9 +112,25 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         }
 
 
-        public bool IsDataBuilt()
-        {
-            return true;
-        }
+
+        // Stubs for Interface compliance ---------------------------------------------------------
+        /// <inheritdoc/>
+        public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput,
+            AddressableAssetsBuildContext aaContext,
+            AddressablesPlayerBuildResult addrResult)
+        { return new(); } // Empty list 
+        /// <inheritdoc/>
+        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput,
+            AddressableAssetsBuildContext aaContext,
+            ExtractDataTask extractData,
+            List<CachedAssetState> cachedState,
+            AddressablesPlayerBuildResult addrResult)
+        { }
+        /// <inheritdoc/>
+        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput,
+            AddressableAssetsBuildContext aaContext,
+            ContentCatalogData contentCatalog)
+        { }
+
     }
 }
