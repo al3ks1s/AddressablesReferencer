@@ -203,48 +203,6 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
                     {
                     }
                 }
-
-                //{
-                //    // I don't understand how it works
-                //    var hRect = EditorGUILayout.BeginHorizontal();
-                //    var labelRect = GUILayoutUtility.GetRect(m_ExportCatalogForBuildTargets, EditorStyles.toolbarButton);
-                //    EditorGUI.LabelField(labelRect, m_ExportCatalogForBuildTargets);
-
-                //    //m_ExportCatalogForBuildTargetsDropDown.text = string.Join(", ", BuildTargetsForCatalog.Select(t=> Enum.GetName(typeof(BuildTarget), t)));
-
-                //    var gBuildRect = GUILayoutUtility.GetRect(m_ExportCatalogForBuildTargetsDropDown, EditorStyles.toolbarButton);
-                //    if (EditorGUILayout.DropdownButton(m_ExportCatalogForBuildTargetsDropDown, FocusType.Passive))
-                //    {
-                //        var menu = new GenericMenu();
-
-                //        menu.AddItem(new GUIContent($"Everything", "Ensure the game you want to reference uses the build targets you select."), false, () => { AddAllTargetsToCatalogList(); });
-                //        menu.AddItem(new GUIContent($"Nothing", "Ensure the game you want to reference uses the build targets you select."), false, () => { ClearBuildTargetForCatalogList(); });
-
-                //        foreach (var targetValue in Enum.GetValues(typeof(BuildTarget)))
-                //        {
-                //            if (BuildPipeline.IsBuildTargetSupported(EditorUserBuildSettings.selectedBuildTargetGroup, (BuildTarget)targetValue))
-                //            {
-                //                menu.AddItem(new GUIContent($"{Enum.GetName(typeof(BuildTarget), targetValue)}", "Ensure the game you want to reference uses the build targets you select."), IsBuildTargetActive((BuildTarget)targetValue), () =>
-                //                {
-                //                    if (IsBuildTargetActive((BuildTarget)targetValue))
-                //                    {
-                //                        RemoveBuildTargetForCatalog((BuildTarget)targetValue);
-                //                    }
-                //                    else
-                //                    {
-                //                        AddBuildTargetForCatalog((BuildTarget)targetValue);
-                //                    }
-                //                });
-                //            }
-                //        }
-                //        var dropDownRect = gBuildRect;
-                //        dropDownRect.y += gBuildRect.height;
-                //        dropDownRect.x += 5;
-                //        menu.DropDown(dropDownRect);
-                //    }
-
-                //    EditorGUILayout.EndHorizontal();
-                //}
             }
         }
 
