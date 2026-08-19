@@ -1,9 +1,7 @@
 using AddressableReferencer.Editor.Analyzer;
 using AddressableReferencer.Editor.Build;
 using AddressableReferencer.Editor.Settings;
-using Steamworks;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,7 +12,6 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
-using UnityEngine.AddressableAssets.Initialization;
 
 namespace AddressableReferencer.Editor.GUI
 {
