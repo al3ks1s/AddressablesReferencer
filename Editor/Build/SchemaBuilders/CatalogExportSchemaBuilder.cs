@@ -152,7 +152,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
             // Preemptively add all the groups with the same Build path var in case the user forgets to enable the schema on the group
             foreach (var group in aaContext.Settings.groups)
-                if (group.HasSchema<BundledAssetGroupSchema>())
+                if (group != null && group.HasSchema<BundledAssetGroupSchema>())
                     if (group.GetSchema<BundledAssetGroupSchema>().IsEnabled
                         && group.GetSchema<BundledAssetGroupSchema>().IncludeInBuild
                         && group.entries.Any()
