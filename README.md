@@ -16,6 +16,11 @@ This solves several issues at once:
 - Copyright issues, probably
 ![alt text](Documentation~/Images/AD9SR%20rationale.png)
 
+## Features
+
+- Analyze and reference a set of asset bundles for in-game use of "vanilla" assets from a Mod
+- Support for multiple additional catalogs that can be exported to the Build Paths
+
 ## Installation
 
 The easiest method to install is to use the package manager's "Install from Git url feature". 
