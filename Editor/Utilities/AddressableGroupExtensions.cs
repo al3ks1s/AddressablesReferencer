@@ -9,7 +9,7 @@ namespace AddressableReferencer.Editor.Utilities
 
         public static bool IsReferenceGroup(this AddressableAssetGroup group)
         {
-            return group.HasSchema<AddressableReferenceSchema>();
+            return group != null && group.HasSchema<AddressableReferenceSchema>();
         }
 
     }
