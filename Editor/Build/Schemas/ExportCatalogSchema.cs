@@ -155,6 +155,7 @@ namespace UnityEditor.AddressableAssets.Settings.GroupSchemas
             {
 
                 var unSyncGroups = AddressableAssetSettingsDefaultObject.Settings.groups
+                    .Where(g => g != null)
                     .Where(g => g.HasSchema<ExportCatalogSchema>() && g.HasSchema<BundledAssetGroupSchema>())
                     .Where(g => g.GetSchema<BundledAssetGroupSchema>().BuildPath.Id == Group.GetSchema<BundledAssetGroupSchema>().BuildPath.Id)
                     .ToList();
