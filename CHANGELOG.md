@@ -1,3 +1,7 @@
+## v1.0.2
+
+Fix Sprite Atlas Generation from bundles
+
 ## v1.0.0
 
 Created two branches to support different versions of the Addressable Package:
