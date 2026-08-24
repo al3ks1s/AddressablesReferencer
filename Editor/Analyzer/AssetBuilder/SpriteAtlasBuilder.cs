@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build.Content;
+using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.U2D;
 using UnityEngine;
@@ -99,18 +101,22 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
             var spriteAsset = AssetManager.GetExtAsset(CabFile, 0, atlasBundleAsset.baseField["m_PackedSprites.Array"][index]["m_PathID"].AsLong);
             spriteName = spriteAsset.baseField["m_Name"].AsString;
 
-            Debug.Log($"Searching for sprite:{spriteName} in altas {Path.GetFileNameWithoutExtension(Location.InternalId)}");
             var sprites = AssetDatabase.FindAssets($"{spriteName.Replace("]", "")} t:Sprite");
             string spriteGuid = string.Empty;
 
-            if (sprites.Length > 1)
+            if (sprites.Length == 0)
+            {
+                Debug.LogWarning($"No sprite found for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} ");
+                return string.Empty;
+            }
+
+            if (sprites.Length == 1)
             {
                 spriteGuid = sprites[0];
+            }
 
-                // Debug.Log($"Found {sprites.Length} sprites for {spriteName}");
-
-                List<string> finalSprites = new();
-
+            if (sprites.Length > 1)
+            {
                 var renderDataTexture = AssetManager.GetExtAsset(
                     CabFile,
                     0,
@@ -124,62 +130,38 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
                     atlasBundleAsset.baseField["m_RenderDataMap.Array"][index]["second.textureRect.height"].AsFloat
                 );
 
-                foreach (var matchedSprite in sprites)
-                {
+                var finalSprites = sprites.Select(s => AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(s), typeof(Sprite)) as Sprite)
+                    .Where(s => s.texture != null)
+                    .Where(s =>
+                        (
+                            isValidTextureName(s.texture.name) &&
+                            CompareTextureNames(renderDataTexture.baseField["m_Name"].AsString, s.texture.name)
+                        ) ||
+                        renderDataTexture.baseField["m_Name"].AsString.Replace("|", "_").Equals(s.texture.name))
+                    .Where(s => s.name.Equals(spriteName))
+                    .Where(s => ComparePhysicsShapes(s, spriteAsset))
+                    .Where(s => s.rect.Equals(spriteRect));
 
-                    string tempSpritePath = AssetDatabase.GUIDToAssetPath(matchedSprite);
-                    Sprite tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
-
-                    if (tempSpriteObject.texture == null)
-                        continue;
-
-                    if (isValidTextureName(tempSpriteObject.texture.name))
-                    {
-                        if (!CompareTextureNames(renderDataTexture.baseField["m_Name"].AsString, tempSpriteObject.texture.name))
-                            continue;
-                    }
-                    else // In case the texture isn't an atlas, it happens with directly addressable paths
-                    {
-                        if (!renderDataTexture.baseField["m_Name"].AsString.Replace("|", "_").Equals(tempSpriteObject.texture.name))
-                            continue;
-                    }
-
-                    if (!tempSpriteObject.name.Equals(spriteName))
-                        continue;
-
-                    if (!ComparePhysicsShapes(tempSpriteObject, spriteAsset))
-                        continue;
-
-                    if (!tempSpriteObject.rect.Equals(spriteRect))
-                        continue;
-
-                    finalSprites.Add(matchedSprite);
-
+                if (finalSprites.Count() == 0) { 
+                    Debug.LogError($"No sprite matched for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)}");
                 }
 
-                if (finalSprites.Count != 0)
+                if (finalSprites.Count() > 1)
                 {
-                    if (finalSprites.Count > 1)
-                    {
-                        Debug.LogWarning($"More than one sprite found for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} after filtering find a way to differentiate the following {finalSprites.Count} sprites {string.Join(", ", finalSprites.Select(g => Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(g))))}");
-                    }
+                    Debug.LogWarning($"More than one sprite found for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} after filtering. Selecting first but find a way to differentiate the following {finalSprites.Count()} sprites {string.Join(", ", sprites.Select(g => Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(g))))}");
 
-                    spriteGuid = finalSprites[0];
-                }
-                else
-                {
-                    Debug.LogError($"No sprite matched for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} ");
+                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(finalSprites.First(), out var guid, out var localid);
+                    spriteGuid = guid;
                 }
 
-            }
-            else if (sprites.Length == 0)
-            {
-                Debug.LogWarning($"No sprite found for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} ");
-                return string.Empty;
+                if (finalSprites.Count() == 1)
+                {
+                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(finalSprites.First(), out var guid, out var localid);
+                    spriteGuid = guid;
+                }
             }
 
             return spriteGuid;
-
         }
 
         public string SearchExternalSprite(AssetExternal atlasBundleAsset, int index)
@@ -190,15 +172,21 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
             spriteName = atlasBundleAsset.baseField["m_PackedSpriteNamesToIndex.Array"][index].AsString;
 
             var sprites = AssetDatabase.FindAssets($"{spriteName.Replace("]", "")} t:Sprite");
-            string spriteGuid = sprites[0];
+            string spriteGuid = string.Empty;
+
+            if (sprites.Length == 0)
+            {
+                Debug.LogWarning($"No sprite found for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} ");
+                return string.Empty;
+            }
+
+            if (sprites.Length == 1)
+            {
+                spriteGuid = sprites[0];
+            }
 
             if (sprites.Length > 1)
             {
-
-                // Debug.Log($"Found more than one sprite for {spriteName}");
-
-                List<string> finalSprites = new();
-
                 var renderDataTexture = AssetManager.GetExtAsset(
                     CabFile,
                     0,
@@ -212,48 +200,28 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
                     atlasBundleAsset.baseField["m_RenderDataMap.Array"][index]["second.textureRect.height"].AsFloat
                 );
 
-                foreach (var matchedSprite in sprites)
+                var finalSprites = sprites.Select(s => AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(s), typeof(Sprite)) as Sprite)
+                    .Where(s => s.name.Equals(spriteName))
+                    .Where(s => s.rect.Equals(spriteRect));
+
+                if (finalSprites.Count() == 0)
                 {
-                    string tempSpritePath = AssetDatabase.GUIDToAssetPath(matchedSprite);
-                    Sprite tempSpriteObject = AssetDatabase.LoadAssetAtPath(tempSpritePath, typeof(Sprite)) as Sprite;
-
-                    // Info not in the atlas bundle for external sprites
-                    //if (!CompareTextureNames(renderDataTexture.baseField["m_Name"].AsString, tempSpriteObject.texture.name))
-                    //    continue;
-
-                    if (!tempSpriteObject.name.Equals(spriteName))
-                        continue;
-
-                    // Info not in the atlas bundle for external sprites
-                    //if (!ComparePhysicsShapes(tempSpriteObject, spriteAsset))
-                    //    continue;
-
-                    if (!tempSpriteObject.rect.Equals(spriteRect))
-                        continue;
-
-                    finalSprites.Add(matchedSprite);
-
+                    Debug.LogError($"No sprite matched for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)}");
                 }
 
-                if (finalSprites.Count != 0)
+                if (finalSprites.Count() > 1)
                 {
-                    if (finalSprites.Count > 1)
-                    {
-                        Debug.LogWarning($"More than one sprite found for {spriteName} after filtering find a way to differentiate the following {finalSprites.Count} sprites {string.Join(", ", finalSprites.Select(g => Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(g))))}");
-                    }
+                    Debug.LogWarning($"More than one sprite found for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)} after filtering. Selecting first but find a way to differentiate the following {sprites.Length} sprites {string.Join(", ", sprites.Select(g => Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(g))))}");
 
-                    spriteGuid = finalSprites[0];
-                }
-                else
-                {
-                    Debug.LogError($"No sprite matched for {spriteName}");
+                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(finalSprites.First(), out var guid, out var localid);
+                    spriteGuid = guid;
                 }
 
-            }
-            else if (sprites.Length == 0)
-            {
-                Debug.LogWarning($"No sprite found for {spriteName}");
-                return string.Empty;
+                if (finalSprites.Count() == 1)
+                {
+                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(finalSprites.First(), out var guid, out var localid);
+                    spriteGuid = guid;
+                }
             }
 
             return spriteGuid;
