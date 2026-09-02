@@ -1,5 +1,6 @@
 using AddressableReferencer.Editor.Settings;
 using AddressableReferencer.Editor.Utilities;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,6 +16,8 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
+using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
+using static UnityEditor.FilePathAttribute;
 
 namespace AddressableReferencer.Editor.Analyzer
 {
@@ -116,7 +119,8 @@ namespace AddressableReferencer.Editor.Analyzer
             /*
 
             Preprocess: 
-            - replace("/", "_")
+            - replace("/", "_") 
+            - replace("__", "_") to 
             - lookup and remove following regex : '_?[a-f0-9]{32}.bundle'
             - Split("_") For sorting
             - Split("_assets_") for group generation
@@ -127,6 +131,7 @@ namespace AddressableReferencer.Editor.Analyzer
             - splitArray.size = 3
                 - label == "all" -> Packed together
                 - label == anything else (even empty string) -> Packed by label
+                - TODO: Adapt for multiple underscores in label (how?)
 
             - Default/Unknown -> Packed together 
 
@@ -157,7 +162,7 @@ namespace AddressableReferencer.Editor.Analyzer
                 string primaryKey = bundle.PrimaryKey.ToString().Replace("/", "_");
                 primaryKey = Regex.Replace(primaryKey, "_?[0-9a-f]{32}.bundle", "");
 
-                string[] primaryKeyComponents = primaryKey.Split("_");
+                string[] primaryKeyComponents = primaryKey.Replace("__", "_").Split("_");
                 string[] primaryKeyGroupLabelComp = primaryKey.Split("_assets_");
 
                 if (primaryKeyComponents.Length == 1)
@@ -192,6 +197,8 @@ namespace AddressableReferencer.Editor.Analyzer
                 HashSet<string> groups = new HashSet<string>();
 
                 labels = labelBundles.Select(b => Regex.Replace(b.PrimaryKey.Split("_assets_").Last().Replace(".bundle", ""), "_[0-9a-f]{32}", "")).ToHashSet();
+                labels = DeconcatenateLabels(labels);
+
                 groups = labelBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
 
                 foreach (var label in labels)
@@ -261,7 +268,7 @@ namespace AddressableReferencer.Editor.Analyzer
                 using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
                 {
                     progressTracker.UpdateTask($"({++counter}/{groupMapping.Count}) - Processing bundle : {Path.GetFileName(mapping.Item1.InternalId)}");
-
+                    
                     BundleAnalyzer ba = new BundleAnalyzer(
                         mapping.Item1,
                         mapping.Item2,
@@ -271,6 +278,8 @@ namespace AddressableReferencer.Editor.Analyzer
                     ba.ProcessBundle();
                 }
             }
+
+            PostProcessNonBundleLocations();
             SaveReferenceSchemas();
         }
         public void ProcessBuiltInBundle()
@@ -281,7 +290,125 @@ namespace AddressableReferencer.Editor.Analyzer
             );
             ba.ProcessBundle();
         }
+        public void PostProcessNonBundleLocations()
+        {
+            CreateSceneGroup();
 
+            var labels = AddressableAssetSettingsDefaultObject.Settings.GetLabels();
+
+            var nbLocations = Locator.AllLocations
+                .Where(l => l.ProviderId != typeof(AssetBundleProvider).ToString())
+                .Where(l => !Regex.IsMatch(l.PrimaryKey, "^[0-9a-f]{32}$"));
+
+            Dictionary<string, int> entryPKtoCount = new();
+            foreach (var a in nbLocations)
+            {
+                if (!entryPKtoCount.Keys.Contains(a.PrimaryKey))
+                    entryPKtoCount[a.PrimaryKey] = 0;
+
+                entryPKtoCount[a.PrimaryKey]++;
+            }
+
+            nbLocations = nbLocations.Where(l => 
+                !labels.Contains(l.PrimaryKey.ToLower()) || (
+                    Path.GetFileNameWithoutExtension(l.InternalId).Equals(l.PrimaryKey) && 
+                    entryPKtoCount[l.PrimaryKey] == 1
+            ));
+
+            foreach (var a in nbLocations)
+            {
+                RekeyLocation(a);
+            }
+        }
+
+        public void CreateSceneGroup()
+        {
+            int counter = 0;
+
+            var SceneGroup = CreateOrGetGroup("Scenes", BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+            var sceneLocations = Locator.AllLocations
+                .Where(l => l.ProviderId != typeof(AssetBundleProvider).ToString())
+                .Where(l => l.ResourceType.ToString() == "UnityEngine.ResourceManagement.ResourceProviders.SceneInstance");
+
+            SceneGroup.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = false;
+            SceneGroup.GetSchema<AddressableReferenceSchema>().IsEnabled = false;
+            
+            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            {
+                foreach (var loc in sceneLocations)
+                {
+                    progressTracker.UpdateTask($"({++counter}/{groupMapping.Count}) - Processing Scene : {Path.GetFileName(loc.InternalId)}");
+                    var assetGuid = AssetDatabase.AssetPathToGUID(loc.InternalId);
+                    if (assetGuid.Equals(string.Empty))
+                    {
+                        Debug.LogWarning($"[AD9S Referencer] Could not find asset {loc.InternalId} for catalog entry {loc.PrimaryKey}");
+                        continue;
+                    }
+
+                    AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(assetGuid, SceneGroup, true, true);
+                }
+            }
+        }
+   
+        public HashSet<string> DeconcatenateLabels(HashSet<string> labels)
+        {
+            var listLabels = labels.ToList().OrderBy(s => s.Length).ToList();
+            Dictionary<string, List<string>> result = new();
+
+            foreach (var label in listLabels)
+            {
+                
+                int n = label.Length;
+
+                var dp = new List<string>[n + 1];
+                dp[0] = new List<string>();
+
+                for (int i = 1; i <= n; i++)
+                {
+                    for (int j = 0; j < i; j++)
+                    {
+                        if (dp[j] == null) continue;
+
+                        if (j == 0 && i == n) continue;
+
+                        string piece = label.Substring(j, i - j);
+                        if (listLabels.Contains(piece))
+                        {
+                            dp[i] = new List<string>(dp[j]) { piece };
+                            break;
+                        }
+                    }
+                }
+
+                result[label] = dp[n];
+            }
+
+            return result
+                .Where(k => k.Value == null)
+                .Select(k => k.Key)
+                .ToHashSet();
+        }
+
+        public void RekeyLocation(IResourceLocation location)
+        {
+
+            var entries = AddressableAssetSettingsDefaultObject.Settings.groups
+                .Where(g => g != null)
+                .SelectMany(g => g.entries)
+                .Where(e => e.AssetPath.Equals(location.InternalId));
+
+            if (entries.Count() == 0)
+                return;
+
+            var entry = entries.First();
+
+            if (entries.Count() > 1)
+                Debug.LogWarning($"Encountered multiple entries when trying to re-key entry {entry.address} to {location.PrimaryKey}");
+
+            Debug.Log($"[AD9S Referencer] Setting addressable entry address from {entry.address} to {location.PrimaryKey}");
+            entry.SetAddress(location.PrimaryKey);
+
+        }
 
         public static AddressableAssetGroup CreateOrGetGroup(string name, BundledAssetGroupSchema.BundlePackingMode mode)
         {

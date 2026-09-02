@@ -102,7 +102,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
                 if (oldEntry.parentGroup.SchemaTypes.Contains(typeof(AddressableReferenceSchema)))
                     return oldEntry;
             }
-
             var entry = AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(
                 assetGUID,
                 AssetGroup,
@@ -115,8 +114,9 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             if (Labels != null)
             {
-                foreach(var label in Labels)
+                foreach(var label in Labels) {
                     entry.SetLabel(label, true);
+                }
             }
 
             return entry;
