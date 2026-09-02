@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
@@ -58,17 +59,55 @@ namespace AddressableReferencer.Editor.Analyzer
             }
         }
 
+        private string[] m_Labels = null;
+
         // Temp
         public string[] Labels
         {
             get
             {
-                if (schema.BundleMode == BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel)
-                {
-                    return new string[] { Regex.Replace(location.PrimaryKey.Split("_assets_").Last().Replace(".bundle", ""), "_[0-9a-f]{32}", "") };
+                if (m_Labels == null) { 
+
+                    if (schema.BundleMode == BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel)
+                    {
+
+                        List<string> listLabels = AddressableAssetSettingsDefaultObject.Settings.GetLabels();
+
+                        string concatLabels = Regex.Replace(location.PrimaryKey.Split("_assets_").Last().Replace(".bundle", ""), "_[0-9a-f]{32}", "");
+                        int n = concatLabels.Length;
+
+                        var dp = new List<string>[n + 1];
+                        dp[0] = new List<string>();
+
+                        for (int i = 1; i <= n; i++)
+                        {
+                            for (int j = 0; j < i; j++)
+                            {
+                                if (dp[j] == null) continue;
+
+                                if (j == 0 && i == n) continue;
+
+                                string piece = concatLabels.Substring(j, i - j);
+                                if (listLabels.Contains(piece))
+                                {
+                                    dp[i] = new List<string>(dp[j]) { piece };
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (dp[n] == null)
+                        {
+                            m_Labels = new string[] { concatLabels };
+                        } 
+                        else
+                        {
+                            m_Labels = dp[n].ToArray();
+                        }
+                    }
                 }
 
-                return null;
+                return m_Labels;
             }
         }
 

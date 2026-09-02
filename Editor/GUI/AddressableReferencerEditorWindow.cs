@@ -170,7 +170,7 @@ namespace AddressableReferencer.Editor.GUI
 
                 menu.AddItem(new GUIContent("Set StreamingAssets Folder"), false, SelectStreamingAssetsPath);
                 menu.AddItem(new GUIContent("Replace Assets"), false, ReplaceAssetReferences);
-                // menu.AddItem(new GUIContent("Fast Test Stuff"), false, FastTest);
+                menu.AddItem(new GUIContent("Fast Test Stuff"), false, FastTest);
                 menu.AddSeparator(string.Empty);
 
                 menu.AddItem(new GUIContent("Reset Addressables Referencer Settings"), false, ResetReferencerSetup);
@@ -269,9 +269,8 @@ namespace AddressableReferencer.Editor.GUI
             m_entryTree.Repaint();
         }
         
-        private void FastTest()
+        private void FastTest() 
         {
-            
         }
 
         // Processing
