@@ -325,12 +325,12 @@ namespace AddressableReferencer.Editor.Analyzer
         {
             int counter = 0;
 
-            var SceneGroup = CreateOrGetGroup("Scenes", BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+            var SceneGroup = CreateOrGetGroup("Base Scenes", BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
             var sceneLocations = Locator.AllLocations
                 .Where(l => l.ProviderId != typeof(AssetBundleProvider).ToString())
                 .Where(l => l.ResourceType.ToString() == "UnityEngine.ResourceManagement.ResourceProviders.SceneInstance");
 
-            SceneGroup.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = false;
+            SceneGroup.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = true;
             SceneGroup.GetSchema<AddressableReferenceSchema>().IsEnabled = false;
             
             using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
