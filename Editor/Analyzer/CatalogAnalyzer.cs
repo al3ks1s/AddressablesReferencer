@@ -1,6 +1,5 @@
 using AddressableReferencer.Editor.Settings;
 using AddressableReferencer.Editor.Utilities;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,8 +15,6 @@ using UnityEngine.AddressableAssets.ResourceLocators;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.ResourceManagement.ResourceProviders;
-using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
-using static UnityEditor.FilePathAttribute;
 
 namespace AddressableReferencer.Editor.Analyzer
 {
@@ -44,6 +41,8 @@ namespace AddressableReferencer.Editor.Analyzer
         IResourceLocation unitybuiltins;
 
         List<(IResourceLocation, AddressableAssetGroup)> groupMapping = new();
+
+        List<BundleAnalyzer> analyzers = new();
 
         public bool LoadCatalog(string catalogPath)
         {
@@ -268,18 +267,22 @@ namespace AddressableReferencer.Editor.Analyzer
                 using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
                 {
                     progressTracker.UpdateTask($"({++counter}/{groupMapping.Count}) - Processing bundle : {Path.GetFileName(mapping.Item1.InternalId)}");
-                    
+
                     BundleAnalyzer ba = new BundleAnalyzer(
                         mapping.Item1,
                         mapping.Item2,
                         StreamingAssetsPath,
                         monoscript
                     );
+                    if (!analyzers.Contains(ba))
+                        analyzers.Add(ba);
+
                     ba.ProcessBundle();
                 }
             }
 
             PostProcessNonBundleLocations();
+            RefreshInternalNames();
             SaveReferenceSchemas();
         }
         public void ProcessBuiltInBundle()
@@ -309,9 +312,9 @@ namespace AddressableReferencer.Editor.Analyzer
                 entryPKtoCount[a.PrimaryKey]++;
             }
 
-            nbLocations = nbLocations.Where(l => 
+            nbLocations = nbLocations.Where(l =>
                 !labels.Contains(l.PrimaryKey.ToLower()) || (
-                    Path.GetFileNameWithoutExtension(l.InternalId).Equals(l.PrimaryKey) && 
+                    Path.GetFileNameWithoutExtension(l.InternalId).Equals(l.PrimaryKey) &&
                     entryPKtoCount[l.PrimaryKey] == 1
             ));
 
@@ -320,24 +323,41 @@ namespace AddressableReferencer.Editor.Analyzer
                 RekeyLocation(a);
             }
         }
-
         public void CreateSceneGroup()
         {
             int counter = 0;
 
-            var SceneGroup = CreateOrGetGroup("Base Scenes", BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+            var SceneGroup = AddressableAssetSettingsDefaultObject.Settings.FindGroup(g => g.Name == $"Base Game Scenes");
+
+            if (SceneGroup == null)
+            {
+                SceneGroup = AddressableAssetSettingsDefaultObject.Settings.CreateGroup(
+                    $"Base Game Scenes",
+                    false,
+                    true,
+                    true,
+                    new() {
+                        CreateBundleSchema(
+                            BundledAssetGroupSchema.BundlePackingMode.PackSeparately
+                        ),
+                    }
+                );
+            }
+
             var sceneLocations = Locator.AllLocations
                 .Where(l => l.ProviderId != typeof(AssetBundleProvider).ToString())
                 .Where(l => l.ResourceType.ToString() == "UnityEngine.ResourceManagement.ResourceProviders.SceneInstance");
 
+            SceneGroup.RemoveSchema<AddressableReferenceSchema>();
             SceneGroup.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = true;
-            SceneGroup.GetSchema<AddressableReferenceSchema>().IsEnabled = false;
-            
+            SceneGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
+
+
             using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
             {
                 foreach (var loc in sceneLocations)
                 {
-                    progressTracker.UpdateTask($"({++counter}/{groupMapping.Count}) - Processing Scene : {Path.GetFileName(loc.InternalId)}");
+                    progressTracker.UpdateTask($"({++counter}/{sceneLocations.Count()}) - Processing Scene : {Path.GetFileName(loc.InternalId)}");
                     var assetGuid = AssetDatabase.AssetPathToGUID(loc.InternalId);
                     if (assetGuid.Equals(string.Empty))
                     {
@@ -349,7 +369,45 @@ namespace AddressableReferencer.Editor.Analyzer
                 }
             }
         }
-   
+        public void RekeyLocation(IResourceLocation location)
+        {
+
+            var entries = AddressableAssetSettingsDefaultObject.Settings.groups
+                .Where(g => g != null)
+                .SelectMany(g => g.entries)
+                .Where(e => e.AssetPath.Equals(location.InternalId));
+
+            if (entries.Count() == 0)
+                return;
+
+            var entry = entries.First();
+
+            if (entries.Count() > 1)
+                Debug.LogWarning($"Encountered multiple entries when trying to re-key entry {entry.address} to {location.PrimaryKey}");
+
+            Debug.Log($"[AD9S Referencer] Setting addressable entry address from {entry.address} to {location.PrimaryKey}");
+            entry.SetAddress(location.PrimaryKey);
+            if (entry.parentGroup.HasSchema<BundledAssetGroupSchema>())
+            {
+                entry.parentGroup.GetSchema<BundledAssetGroupSchema>().IncludeAddressInCatalog = true;
+            }
+        }
+        public void RefreshInternalNames()
+        {
+            int counter = 0;
+
+            foreach (var analyzer in analyzers)
+            {
+                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+                {
+                    progressTracker.UpdateTask($"({++counter}/{analyzers.Count}) - Refreshing bundle internal name : {Path.GetFileName(analyzer.location.PrimaryKey)}");
+                    Debug.Log($"Refresging{Path.GetFileName(analyzer.location.PrimaryKey)}");
+                    analyzer.GenerateBundleName();
+                }
+            }
+        }
+
+
         public HashSet<string> DeconcatenateLabels(HashSet<string> labels)
         {
             var listLabels = labels.ToList().OrderBy(s => s.Length).ToList();
@@ -357,7 +415,7 @@ namespace AddressableReferencer.Editor.Analyzer
 
             foreach (var label in listLabels)
             {
-                
+
                 int n = label.Length;
 
                 var dp = new List<string>[n + 1];
@@ -387,27 +445,6 @@ namespace AddressableReferencer.Editor.Analyzer
                 .Where(k => k.Value == null)
                 .Select(k => k.Key)
                 .ToHashSet();
-        }
-
-        public void RekeyLocation(IResourceLocation location)
-        {
-
-            var entries = AddressableAssetSettingsDefaultObject.Settings.groups
-                .Where(g => g != null)
-                .SelectMany(g => g.entries)
-                .Where(e => e.AssetPath.Equals(location.InternalId));
-
-            if (entries.Count() == 0)
-                return;
-
-            var entry = entries.First();
-
-            if (entries.Count() > 1)
-                Debug.LogWarning($"Encountered multiple entries when trying to re-key entry {entry.address} to {location.PrimaryKey}");
-
-            Debug.Log($"[AD9S Referencer] Setting addressable entry address from {entry.address} to {location.PrimaryKey}");
-            entry.SetAddress(location.PrimaryKey);
-
         }
 
         public static AddressableAssetGroup CreateOrGetGroup(string name, BundledAssetGroupSchema.BundlePackingMode mode)
