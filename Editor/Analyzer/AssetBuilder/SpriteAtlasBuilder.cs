@@ -1,18 +1,12 @@
-using AssetsTools.NET;
+using AddressableReferencer.Editor.Analyzer.AssetAnalysis;
 using AssetsTools.NET.Extra;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.Build.Content;
-using UnityEditor.Build.Pipeline;
-using UnityEditor.Build.Pipeline.Utilities;
 using UnityEditor.U2D;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.TextCore.Text;
 using UnityEngine.U2D;
-using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
 
 namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
 {
@@ -62,6 +56,27 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
 
             AssetDatabase.CreateAsset(sa, assetPath);
             string atlasGUID = AssetDatabase.AssetPathToGUID(assetPath);
+
+            var packingSettings = new SpriteAtlasPackingSettings();
+            packingSettings.enableAlphaDilation = true;
+            packingSettings.padding = 2;
+            packingSettings.enableRotation = true;
+            packingSettings.enableTightPacking = true;
+
+            var platformSetting = new TextureImporterPlatformSettings();
+            platformSetting.format = GetAtlasFormat();
+            platformSetting.maxTextureSize = GetMaxTextureSize();
+            platformSetting.textureCompression = TextureImporterCompression.CompressedHQ;
+            platformSetting.crunchedCompression = false;
+            platformSetting.overridden = true;
+
+            var textureSetting = new SpriteAtlasTextureSettings();
+            textureSetting.generateMipMaps = false;
+            
+            sa.SetPackingSettings(packingSettings);
+            sa.SetPlatformSettings(platformSetting);
+            sa.SetTextureSettings(textureSetting);
+
 
             for (int i = 0; i < atlasBundleAsset.baseField["m_PackedSprites.Array"].AsArray.size; i++)
             {
@@ -123,13 +138,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
                     atlasBundleAsset.baseField["m_RenderDataMap.Array"][index]["second.texture.m_PathID"].AsLong
                 );
 
-                var spriteRect = new Rect(
-                    atlasBundleAsset.baseField["m_RenderDataMap.Array"][index]["second.textureRect.x"].AsFloat,
-                    atlasBundleAsset.baseField["m_RenderDataMap.Array"][index]["second.textureRect.y"].AsFloat,
-                    atlasBundleAsset.baseField["m_RenderDataMap.Array"][index]["second.textureRect.width"].AsFloat,
-                    atlasBundleAsset.baseField["m_RenderDataMap.Array"][index]["second.textureRect.height"].AsFloat
-                );
-
                 var finalSprites = sprites.Select(s => AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(s), typeof(Sprite)) as Sprite)
                     .Where(s => s.texture != null)
                     .Where(s =>
@@ -140,7 +148,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
                         renderDataTexture.baseField["m_Name"].AsString.Replace("|", "_").Equals(s.texture.name))
                     .Where(s => s.name.Equals(spriteName))
                     .Where(s => ComparePhysicsShapes(s, spriteAsset))
-                    .Where(s => s.rect.Equals(spriteRect));
+                    .ToList();
 
                 if (finalSprites.Count() == 0) { 
                     Debug.LogError($"No sprite matched for {spriteName} in Atlas {Path.GetFileNameWithoutExtension(Location.InternalId)}");
@@ -163,7 +171,6 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
 
             return spriteGuid;
         }
-
         public string SearchExternalSprite(AssetExternal atlasBundleAsset, int index)
         {
             string spriteName = string.Empty;
@@ -283,6 +290,14 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
             return true;
         }
 
+        private int GetMaxTextureSize()
+        {
+            return 0;
+        }
+        private TextureImporterFormat GetAtlasFormat()
+        {
+            return TextureImporterFormat.ARGB32;
+        }
 
     }
 }
