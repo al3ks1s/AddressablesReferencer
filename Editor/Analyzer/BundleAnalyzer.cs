@@ -189,6 +189,7 @@ namespace AddressableReferencer.Editor.Analyzer
 
             if (referenceEntry.isDone)
             {
+                mgr.UnloadAll();
                 rfa.Dispose();
                 return;
             }
@@ -198,6 +199,8 @@ namespace AddressableReferencer.Editor.Analyzer
 
             if (isScene)
             {
+                mgr.UnloadAll();
+                rfa.Dispose();
                 return;
             }
 
@@ -207,8 +210,6 @@ namespace AddressableReferencer.Editor.Analyzer
             referenceEntry.isDone = true;
 
             mgr.UnloadAll();
-            GC.Collect();
-
             rfa.Dispose();
 
         }
