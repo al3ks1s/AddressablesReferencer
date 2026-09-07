@@ -1,5 +1,6 @@
 using AddressableReferencer.Editor.Settings;
 using AddressableReferencer.Editor.Utilities;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -284,6 +285,8 @@ namespace AddressableReferencer.Editor.Analyzer
             PostProcessNonBundleLocations();
             RefreshInternalNames();
             SaveReferenceSchemas();
+
+            GC.Collect();
         }
         public void ProcessBuiltInBundle()
         {
