@@ -72,11 +72,14 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
 
             var textureSetting = new SpriteAtlasTextureSettings();
             textureSetting.generateMipMaps = false;
-            
+
+            /* Need some more work on that, but im not sure it is required once in game since the `SpriteRenderers` only have a direct 
+             * reference to a `Sprite` object and do not "query" the `SpriteAtlas` directly so the Editor-side SpriteAtlas packing options
+             * don't really matter in the end.
             sa.SetPackingSettings(packingSettings);
             sa.SetPlatformSettings(platformSetting);
             sa.SetTextureSettings(textureSetting);
-
+            */
 
             for (int i = 0; i < atlasBundleAsset.baseField["m_PackedSprites.Array"].AsArray.size; i++)
             {
