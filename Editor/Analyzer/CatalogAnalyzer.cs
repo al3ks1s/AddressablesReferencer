@@ -352,7 +352,7 @@ namespace AddressableReferencer.Editor.Analyzer
                 .Where(l => l.ResourceType.ToString() == "UnityEngine.ResourceManagement.ResourceProviders.SceneInstance");
 
             SceneGroup.RemoveSchema<AddressableReferenceSchema>();
-            SceneGroup.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = true;
+            SceneGroup.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = false;
             SceneGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
 
 
