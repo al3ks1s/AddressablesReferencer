@@ -1,5 +1,3 @@
-#define ADDRESSABLES_REFERENCER_AVAILABLE
-
 using UnityEditor;
 using UnityEngine;
 
@@ -13,8 +11,6 @@ namespace AddressableReferencer.Editor.Settings {
 
         static AddressableReferencerEditorInit()
         {
-            PlayerSettings.SetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.Standalone, "ADDRESSABLES_REFERENCER_AVAILABLE");
-
             if (!AddressableReferencerDefaultObject.SettingsExists) { 
                 AddressableReferencerDefaultObject.InitialSetup();            
             }
