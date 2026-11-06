@@ -1,6 +1,6 @@
+#define ADDRESSABLES_REFERENCER_AVAILABLE
+
 using UnityEditor;
-using UnityEditor.AddressableAssets;
-using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEngine;
 
 namespace AddressableReferencer.Editor.Settings { 
