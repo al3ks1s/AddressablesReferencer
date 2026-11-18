@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 
@@ -36,6 +38,14 @@ namespace AddressableReferencer.Editor.Settings
             set { m_ExternalStreamingAssetsFolder = value; Save(); }
         }
 
+        [SerializeField]
+        private string m_RelativeAssetsRoot;
+        public string RelativeAssetsRoot
+        {
+            get { return m_RelativeAssetsRoot; }
+            set { m_RelativeAssetsRoot = value; Save(); }
+        }
+
 
         [SerializeField]
         private bool m_MoveCatalogToSharedBundleBuildPath;
@@ -56,11 +66,36 @@ namespace AddressableReferencer.Editor.Settings
 
 
         [SerializeField]
-        private bool m_useBaseGameBuiltinAssets;
+        private bool m_useBaseGameBuiltinAssets = true;
         public bool UseBaseGameBuiltinAssets
         {
             get { return m_useBaseGameBuiltinAssets; }
             set { m_useBaseGameBuiltinAssets = value; Save(); }
+        }
+
+        // Clear data 
+        public void ClearObjectMappings()
+        {
+
+            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
+            foreach (var group in groups.ToArray())
+            {
+                var schema = group.GetSchema<AddressableReferenceSchema>();
+                schema.Entries.Clear();
+            }
+
+            AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry = new();
+        }
+
+        public void ClearAddressableGroups()
+        {
+            ClearObjectMappings();
+
+            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
+            foreach (var group in groups.ToArray())
+            {
+                AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(group);
+            }
         }
 
 

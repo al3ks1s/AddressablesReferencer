@@ -6,9 +6,6 @@ using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
-using UnityEngine;
-using static UnityEditor.AddressableAssets.Build.Layout.BuildLayout;
-using static UnityEditor.FilePathAttribute;
 
 namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 {
@@ -29,7 +26,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             foreach (var asset in bundleBase["m_Container.Array"])
             {
-                string path = asset["first"].AsString;
+                string path = m_parentAnalyzer.GetAssetPath(asset["first"].AsString);
                 long pathId = asset["second.asset.m_PathID"].AsLong;
 
                 var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId, true);

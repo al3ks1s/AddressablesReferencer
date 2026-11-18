@@ -10,8 +10,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
-using UnityEditor.AddressableAssets.Build;
-using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
@@ -24,7 +22,8 @@ namespace AddressableReferencer.Editor.Analyzer
     public class BundleAnalyzer
     {
 
-        string StreamingAssetsPath;
+        public string StreamingAssetsPath;
+        public string RelativeAssetsRoot;
 
         public IResourceLocation location;
         public AddressableAssetGroup assetGroup;
@@ -37,6 +36,8 @@ namespace AddressableReferencer.Editor.Analyzer
         public BundleFileInstance bundle;
         public AssetsFileInstance CABFile;
         public AssetFileInfo assetBundle;
+
+        public ProgressTracker progressTracker;
 
         // Monoscript bundle lookup to get the MonoBehaviour underlying types
         IResourceLocation monoscriptLocation;
@@ -131,13 +132,14 @@ namespace AddressableReferencer.Editor.Analyzer
             return bundlePath;
         }
 
-        public BundleAnalyzer(IResourceLocation loc, AddressableAssetGroup grp, string streamingAssetPath, IResourceLocation monoscript = null)
+        public BundleAnalyzer(IResourceLocation loc, AddressableAssetGroup grp, string streamingAssetPath, string relativeAssetsRoot, IResourceLocation monoscript = null)
         {
             mgr = BundleUtils.CreateDefaultManager();
 
             location = loc;
             assetGroup = grp;
             StreamingAssetsPath = streamingAssetPath;
+            RelativeAssetsRoot = relativeAssetsRoot;
 
             schema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
             referenceSchema = (AddressableReferenceSchema)assetGroup.Schemas.Find(s => s is AddressableReferenceSchema);
@@ -189,6 +191,9 @@ namespace AddressableReferencer.Editor.Analyzer
 
             if (referenceEntry.isDone)
             {
+                if (!progressTracker.UpdateInfo($"Bundle has already been processed, skipping."))
+                    throw new AnalyzerProcessInterruptedException("Process was interrupted by user.");
+
                 mgr.UnloadAll();
                 rfa.Dispose();
                 return;
@@ -215,52 +220,52 @@ namespace AddressableReferencer.Editor.Analyzer
         }
         public void AnalyzeAssets()
         {
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+
+            string bundleName = Path.GetFileName(location.InternalId);
+            string entryPath = String.Empty;
+
+            int counter = 0;
+
+            if (IsFolderBundle)
             {
-                var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+                var analyzer = new FolderAnalyzer(this);
 
-                string bundleName = Path.GetFileName(location.InternalId);
-                string entryPath = String.Empty;
+                var kvp = analyzer.Analyze(0, "");
 
-                int counter = 0;
+                if (kvp.Item1 != null)
+                    entries.Add(kvp.Item1);
 
-                if (IsFolderBundle)
+                if (kvp.Item2 != null)
+                    referenceEntry.m_ObjectMapping.AddRange(kvp.Item2);
+
+            }
+            else
+            {
+                foreach (var asset in bundleBase["m_Container.Array"])
                 {
-                    var analyzer = new FolderAnalyzer(this);
+                    string path = GetAssetPath(asset["first"].AsString);
 
-                    var kvp = analyzer.Analyze(0, "");
+                    long pathId = asset["second.asset.m_PathID"].AsLong;
+                    var assetExt = mgr.GetExtAsset(CABFile, 0, pathId, true);
+
+                    if (!progressTracker.UpdateInfo($"({++counter}/{AssetCount}) - Processing: {Path.GetFileName(path)}"))
+                        throw new AnalyzerProcessInterruptedException("Process was interrupted by user.");
+
+                    var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.info.TypeId, this);
+                    var kvp = analyzer.Analyze(pathId, path);
 
                     if (kvp.Item1 != null)
                         entries.Add(kvp.Item1);
 
                     if (kvp.Item2 != null)
-                        referenceEntry.m_ObjectMapping.AddRange(kvp.Item2);
-
-                }
-                else
-                {
-
-                    foreach (var asset in bundleBase["m_Container.Array"])
                     {
-                        string path = asset["first"].AsString;
-                        long pathId = asset["second.asset.m_PathID"].AsLong;
-                        var assetExt = mgr.GetExtAsset(CABFile, 0, pathId, true);
-
-                        progressTracker.UpdateInfo($"({++counter}/{AssetCount}) - Processing: {Path.GetFileName(path)}");
-                        var analyzer = GenericAnalyzer.GetAnalyzer(assetExt.info.TypeId, this);
-                        var kvp = analyzer.Analyze(pathId, path);
-
-                        if (kvp.Item1 != null)
-                            entries.Add(kvp.Item1);
-
-                        if (kvp.Item2 != null)
-                        {
-                            referenceEntry.m_ObjectMapping.AddRange(kvp.Item2);
-                        }
+                        referenceEntry.m_ObjectMapping.AddRange(kvp.Item2);
                     }
                 }
             }
         }
+
 
         public void GenerateBundleName()
         {
@@ -305,6 +310,16 @@ namespace AddressableReferencer.Editor.Analyzer
             }
 
             throw new Exception("Invalid naming mode.");
+        }
+
+        public string GetAssetPath(string ContainerPath)
+        {
+            if (string.IsNullOrEmpty(ContainerPath))
+            {
+                return ContainerPath;
+            }
+
+            return Path.Combine(CatalogAnalyzer.AssetRoot, RelativeAssetsRoot, Path.GetRelativePath(CatalogAnalyzer.AssetRoot, ContainerPath)).Replace("\\", "/");
         }
 
     }
@@ -386,41 +401,38 @@ namespace AddressableReferencer.Editor.Analyzer
 
         public void AnalyzeAssets()
         {
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+
+            string bundleName = Path.GetFileName(location.InternalId);
+
+            var builtInObjects = AssetDatabase.LoadAllAssetsAtPath("Resources/unity_builtin_extra");
+
+            foreach (var asset in CABFile.file.AssetInfos)
             {
-                var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+                if (asset.PathId == 1)
+                    continue;
 
-                string bundleName = Path.GetFileName(location.InternalId);
+                var assetBase = mgr.GetBaseField(CABFile, asset);
 
-                var builtInObjects = AssetDatabase.LoadAllAssetsAtPath("Resources/unity_builtin_extra");
+                string assetName = assetBase["m_Name"].AsString;
+                if (asset.TypeId == (int)AssetClassID.Shader)
+                    assetName = assetBase["m_ParsedForm.m_Name"].AsString;
 
-                foreach (var asset in CABFile.file.AssetInfos)
+                var potentialObjects = builtInObjects.Where(o => o.GetType().Name == assetBase.TypeName && assetName == o.name);
+
+                if (potentialObjects.Count() > 1)
                 {
-                    if (asset.PathId == 1)
-                        continue;
-
-                    var assetBase = mgr.GetBaseField(CABFile, asset);
-
-                    string assetName = assetBase["m_Name"].AsString;
-                    if (asset.TypeId == (int)AssetClassID.Shader)
-                        assetName = assetBase["m_ParsedForm.m_Name"].AsString;
-
-                    var potentialObjects = builtInObjects.Where(o => o.GetType().Name == assetBase.TypeName && assetName == o.name);
-
-                    if (potentialObjects.Count() > 1)
-                    {
-                        Debug.LogError($"More than one object was found for {assetName}");
-                        continue;
-                    }
-                    else if (potentialObjects.Count() == 0)
-                    {
-                        Debug.LogError($"No object was found for {assetName}");
-                        continue;
-                    }
-
-                    ObjectIdentifier.TryGetObjectIdentifier(potentialObjects.First(), out var obid);
-                    referenceEntry.m_ObjectMapping.Add(new ObjectMapping(obid, asset.PathId));
+                    Debug.LogError($"More than one object was found for {assetName}");
+                    continue;
                 }
+                else if (potentialObjects.Count() == 0)
+                {
+                    Debug.LogError($"No object was found for {assetName}");
+                    continue;
+                }
+
+                ObjectIdentifier.TryGetObjectIdentifier(potentialObjects.First(), out var obid);
+                referenceEntry.m_ObjectMapping.Add(new ObjectMapping(obid, asset.PathId));
             }
         }
     }

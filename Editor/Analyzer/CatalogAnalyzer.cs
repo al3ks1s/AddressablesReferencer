@@ -10,6 +10,7 @@ using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
@@ -22,12 +23,18 @@ namespace AddressableReferencer.Editor.Analyzer
     public class CatalogAnalyzer
     {
 
-        public CatalogAnalyzer(string assetPath)
+        public CatalogAnalyzer()
         {
-            StreamingAssetsPath = assetPath;
+            StreamingAssetsPath = AddressableReferencerDefaultObject.Settings.ExternalStreamingAssetsFolder;
+            RelativeAssetsRoot = AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot;
+            NewTracker();
         }
 
+        public const string AssetRoot = "Assets";
         public string StreamingAssetsPath { get; set; }
+        public string RelativeAssetsRoot { get; set; }
+
+        private ProgressTracker progressTracker;
 
         internal IResourceLocator Locator { get; private set; }
         AsyncOperationHandle<IResourceLocator> LocatorHandle;
@@ -47,25 +54,26 @@ namespace AddressableReferencer.Editor.Analyzer
 
         public bool LoadCatalog(string catalogPath)
         {
+            NewTracker();
 
-            if (StreamingAssetsPath.Equals(string.Empty))
+            if (StreamingAssetsPath.Equals(string.Empty)) {
+                ClearTracker();
                 return false;
-
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
-            {
-
-                progressTracker.UpdateTask($"Loading the catalog");
-
-                Addressables.InitializeAsync().WaitForCompletion();
-                LocatorHandle = Addressables.LoadContentCatalogAsync(catalogPath);
-                Locator = LocatorHandle.WaitForCompletion();
-
-                bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
-                monoscript = TryFindMonoscriptBundle();
-                unitybuiltins = TryFindBuiltinAssetsBundle();
-
-                IdentifyGroups();
             }
+
+            progressTracker.UpdateInfo($"Loading the catalog");
+
+            Addressables.InitializeAsync().WaitForCompletion();
+            LocatorHandle = Addressables.LoadContentCatalogAsync(catalogPath);
+            Locator = LocatorHandle.WaitForCompletion();
+
+            bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
+            monoscript = TryFindMonoscriptBundle();
+            unitybuiltins = TryFindBuiltinAssetsBundle();
+
+            IdentifyGroups();
+
+            ClearTracker();
 
             return true;
         }
@@ -79,9 +87,12 @@ namespace AddressableReferencer.Editor.Analyzer
         public string TryFindCatalog(string catalogName = "catalog.bin")
         {
 
+            NewTracker();
+
             if (!Directory.Exists(StreamingAssetsPath))
             {
                 StreamingAssetsPath = string.Empty;
+                ClearTracker();
                 return string.Empty;
             }
 
@@ -95,9 +106,11 @@ namespace AddressableReferencer.Editor.Analyzer
                     if (!File.Exists(Path.Join(catalogPath, "catalog.hash")))
                         Debug.LogWarning($"Catalog path was found at {potentialCatalog} but no companion hash file");
 
+                    ClearTracker();
                     return potentialCatalog;
                 }
             }
+            ClearTracker();
 
             return string.Empty;
 
@@ -189,102 +202,125 @@ namespace AddressableReferencer.Editor.Analyzer
 
         public void CreateLabelsAssetGroups()
         {
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            progressTracker.UpdateInfo($"Creating label groups");
+            HashSet<string> labels = new HashSet<string>();
+            HashSet<string> groups = new HashSet<string>();
+
+            labels = labelBundles.Select(b => Regex.Replace(b.PrimaryKey.Split("_assets_").Last().Replace(".bundle", ""), "_[0-9a-f]{32}", "")).ToHashSet();
+            labels = DeconcatenateLabels(labels);
+
+            groups = labelBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
+
+            foreach (var label in labels)
+            {
+                if (!label.Equals(""))
+                    AddressableAssetSettingsDefaultObject.Settings.AddLabel(label);
+            }
+
+            foreach (var group in groups)
             {
 
-                progressTracker.UpdateTask($"Creating label groups");
-                HashSet<string> labels = new HashSet<string>();
-                HashSet<string> groups = new HashSet<string>();
+                var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel);
+                var groupBundles = labelBundles.Where(b => b.PrimaryKey.Split("/").Last().Split("_assets_").First().Equals(group));
 
-                labels = labelBundles.Select(b => Regex.Replace(b.PrimaryKey.Split("_assets_").Last().Replace(".bundle", ""), "_[0-9a-f]{32}", "")).ToHashSet();
-                labels = DeconcatenateLabels(labels);
-
-                groups = labelBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
-
-                foreach (var label in labels)
+                foreach (var bun in groupBundles)
                 {
-                    if (!label.Equals(""))
-                        AddressableAssetSettingsDefaultObject.Settings.AddLabel(label);
-                }
-
-                foreach (var group in groups)
-                {
-
-                    var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackTogetherByLabel);
-                    var groupBundles = labelBundles.Where(b => b.PrimaryKey.Split("/").Last().Split("_assets_").First().Equals(group));
-
-                    foreach (var bun in groupBundles)
-                    {
-                        groupMapping.Add((bun, assetGroup));
-                    }
+                    groupMapping.Add((bun, assetGroup));
                 }
             }
         }
         public void CreateSeparatelyPackedGroups()
         {
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+
+            progressTracker.UpdateInfo($"Creating packed separately groups");
+            HashSet<string> groups = separateBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
+
+            foreach (var group in groups)
             {
 
-                progressTracker.UpdateTask($"Creating packed separately groups");
-                HashSet<string> groups = separateBundles.Select(b => b.PrimaryKey.Split("_assets_").First()).ToHashSet();
+                var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
+                var groupBundles = separateBundles.Where(b => b.PrimaryKey.Split("_assets_").First().Equals(group));
 
-                foreach (var group in groups)
+                foreach (var bun in groupBundles)
                 {
-
-                    var assetGroup = CreateOrGetGroup(group, BundledAssetGroupSchema.BundlePackingMode.PackSeparately);
-                    var groupBundles = separateBundles.Where(b => b.PrimaryKey.Split("_assets_").First().Equals(group));
-
-                    foreach (var bun in groupBundles)
-                    {
-                        groupMapping.Add((bun, assetGroup));
-                    }
+                    groupMapping.Add((bun, assetGroup));
                 }
             }
         }
         public void CreatePackedTogetherGroups()
         {
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+
+            progressTracker.UpdateInfo($"Creating packed together groups");
+
+            foreach (var group in togetherBundles)
             {
-
-                progressTracker.UpdateTask($"Creating packed together groups");
-
-                foreach (var group in togetherBundles)
-                {
-                    string groupName = group.PrimaryKey.Replace(".bundle", "").Split("_assets_").First();
-                    var assetGroup = CreateOrGetGroup(groupName, BundledAssetGroupSchema.BundlePackingMode.PackTogether);
-                    groupMapping.Add((group, assetGroup));
-                }
+                string groupName = group.PrimaryKey.Replace(".bundle", "").Split("_assets_").First();
+                var assetGroup = CreateOrGetGroup(groupName, BundledAssetGroupSchema.BundlePackingMode.PackTogether);
+                groupMapping.Add((group, assetGroup));
             }
         }
 
         public void ProcessGroups()
         {
             List<Task> taskList = new();
-
             int counter = 0;
 
-            foreach (var mapping in groupMapping)
-            {
-                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            NewTracker(groupMapping.Count);
+
+            var startTime = DateTime.Now;
+
+            try {
+
+                foreach (var mapping in groupMapping)
                 {
-                    progressTracker.UpdateTask($"({++counter}/{groupMapping.Count}) - Processing bundle : {Path.GetFileName(mapping.Item1.InternalId)}");
+
+                    if (!progressTracker.UpdateTask($"({++counter}/{groupMapping.Count}) - Processing bundle : {Path.GetFileName(mapping.Item1.InternalId)}"))
+                        throw new AnalyzerProcessInterruptedException("Process was interrupted by user.");
 
                     BundleAnalyzer ba = new BundleAnalyzer(
                         mapping.Item1,
                         mapping.Item2,
                         StreamingAssetsPath,
-                        monoscript
+                        RelativeAssetsRoot,
+                        monoscript: monoscript
                     );
+                    ba.progressTracker = progressTracker;
+
                     if (!analyzers.Contains(ba))
                         analyzers.Add(ba);
 
                     ba.ProcessBundle();
+
+                }
+
+                progressTracker.UpdateTask("Post Processing");
+
+                PostProcessNonBundleLocations();
+                RefreshInternalNames();
+                SaveReferenceSchemas();
+
+            } 
+            catch (AnalyzerProcessInterruptedException e)
+            {               
+                if (EditorUtility.DisplayDialog("Process interrupted", "Analyzer process was interrupted. The bundles were only partially processed.\n\nDo you want to clear Referencer Data?", "Clear", "Ignore")){
+                    var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
+                    foreach (var group in groups.ToArray())
+                    {
+                        var schema = group.GetSchema<AddressableReferenceSchema>();
+                        schema.Entries.Clear();
+                    }
+
+                    AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry = new();
                 }
             }
+            finally
+            {
+                var endTime = DateTime.Now;
+                var elapsedSeconds = (endTime - startTime).TotalSeconds;
+                Debug.Log($"Addressables Referencer analysis completed in {elapsedSeconds}s.");
 
-            PostProcessNonBundleLocations();
-            RefreshInternalNames();
-            SaveReferenceSchemas();
+                ClearTracker();
+            }
 
             GC.Collect();
         }
@@ -306,6 +342,9 @@ namespace AddressableReferencer.Editor.Analyzer
                 .Where(l => l.ProviderId != typeof(AssetBundleProvider).ToString())
                 .Where(l => !Regex.IsMatch(l.PrimaryKey, "^[0-9a-f]{32}$"));
 
+            int counter = 0;
+            int nblocCount = nbLocations.Count();
+
             Dictionary<string, int> entryPKtoCount = new();
             foreach (var a in nbLocations)
             {
@@ -321,15 +360,19 @@ namespace AddressableReferencer.Editor.Analyzer
                     entryPKtoCount[l.PrimaryKey] == 1
             ));
 
+            counter = 0;
+
             foreach (var a in nbLocations)
             {
+
+                if (!progressTracker.UpdateInfo($"({++counter}/{nblocCount}) - Rekeying location : {a.PrimaryKey}"))
+                    throw new AnalyzerProcessInterruptedException("Process was interrupted by user.");
+
                 RekeyLocation(a);
             }
         }
         public void CreateSceneGroup()
         {
-            int counter = 0;
-
             var SceneGroup = AddressableAssetSettingsDefaultObject.Settings.FindGroup(g => g.Name == $"Base Game Scenes");
 
             if (SceneGroup == null)
@@ -340,9 +383,11 @@ namespace AddressableReferencer.Editor.Analyzer
                     true,
                     true,
                     new() {
+                        ScriptableObject.CreateInstance<AddressableReferenceSchema>(),
                         CreateBundleSchema(
                             BundledAssetGroupSchema.BundlePackingMode.PackSeparately
                         ),
+                        
                     }
                 );
             }
@@ -351,25 +396,30 @@ namespace AddressableReferencer.Editor.Analyzer
                 .Where(l => l.ProviderId != typeof(AssetBundleProvider).ToString())
                 .Where(l => l.ResourceType.ToString() == "UnityEngine.ResourceManagement.ResourceProviders.SceneInstance");
 
-            SceneGroup.RemoveSchema<AddressableReferenceSchema>();
+            SceneGroup.GetSchema<AddressableReferenceSchema>().IsEnabled = false;
+            SceneGroup.GetSchema<AddressableReferenceSchema>().ReferenceEnabled = false;
             SceneGroup.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = false;
             SceneGroup.GetSchema<BundledAssetGroupSchema>().BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.NoHash;
 
+            int counter = 0;
+            int sceneCount = sceneLocations.Count();
 
-            using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
+            foreach (var loc in sceneLocations)
             {
-                foreach (var loc in sceneLocations)
-                {
-                    progressTracker.UpdateTask($"({++counter}/{sceneLocations.Count()}) - Processing Scene : {Path.GetFileName(loc.InternalId)}");
-                    var assetGuid = AssetDatabase.AssetPathToGUID(loc.InternalId);
-                    if (assetGuid.Equals(string.Empty))
-                    {
-                        Debug.LogWarning($"[AD9S Referencer] Could not find asset {loc.InternalId} for catalog entry {loc.PrimaryKey}");
-                        continue;
-                    }
 
-                    AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(assetGuid, SceneGroup, true, true);
+                var scenePath = GetAssetPath(loc.InternalId);
+
+                if (!progressTracker.UpdateInfo($"({++counter}/{sceneCount}) - Processing Scene : {Path.GetFileName(scenePath)}")) 
+                    throw new AnalyzerProcessInterruptedException("Process was interrupted by user.");
+
+                var assetGuid = AssetDatabase.AssetPathToGUID(scenePath);
+                if (assetGuid.Equals(string.Empty))
+                {
+                    Debug.LogWarning($"[AD9S Referencer] Could not find asset {scenePath} for catalog entry {loc.PrimaryKey}");
+                    continue;
                 }
+
+                AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(assetGuid, SceneGroup, true, true);
             }
         }
         public void RekeyLocation(IResourceLocation location)
@@ -378,7 +428,7 @@ namespace AddressableReferencer.Editor.Analyzer
             var entries = AddressableAssetSettingsDefaultObject.Settings.groups
                 .Where(g => g != null)
                 .SelectMany(g => g.entries)
-                .Where(e => e.AssetPath.Equals(location.InternalId));
+                .Where(e => e.AssetPath.Equals(GetAssetPath(location.InternalId)));
 
             if (entries.Count() == 0)
                 return;
@@ -401,12 +451,10 @@ namespace AddressableReferencer.Editor.Analyzer
 
             foreach (var analyzer in analyzers)
             {
-                using (var progressTracker = new UnityEditor.Build.Pipeline.Utilities.ProgressTracker())
-                {
-                    progressTracker.UpdateTask($"({++counter}/{analyzers.Count}) - Refreshing bundle internal name : {Path.GetFileName(analyzer.location.PrimaryKey)}");
-                    Debug.Log($"Refresging{Path.GetFileName(analyzer.location.PrimaryKey)}");
-                    analyzer.GenerateBundleName();
-                }
+                if (!progressTracker.UpdateInfo($"({++counter}/{analyzers.Count}) - Refreshing bundle internal name : {Path.GetFileName(analyzer.location.PrimaryKey)}"))
+                    throw new AnalyzerProcessInterruptedException("Process was interrupted by user.");                
+                
+                analyzer.GenerateBundleName();
             }
         }
 
@@ -514,5 +562,48 @@ namespace AddressableReferencer.Editor.Analyzer
             EditorUtility.SetDirty(AddressableReferencerDefaultObject.Settings);
             AssetDatabase.SaveAssets();
         }
+
+
+        public string GetAssetPath(string ContainerPath)
+        {
+            if (string.IsNullOrEmpty(ContainerPath))
+            {
+                return ContainerPath;
+            }
+            return Path.Combine(CatalogAnalyzer.AssetRoot, RelativeAssetsRoot, Path.GetRelativePath(CatalogAnalyzer.AssetRoot, ContainerPath)).Replace("\\", "/");
+        }
+
+        private void NewTracker(int TaskCount = 1)
+        {
+            ClearTracker();
+
+            progressTracker = new();
+            progressTracker.TaskCount = TaskCount;
+        }
+
+        private void ClearTracker()
+        {
+            if (progressTracker != null)
+                progressTracker.Dispose();
+        }
     }
+
+    public class AnalyzerProcessInterruptedException : Exception
+    {
+        public AnalyzerProcessInterruptedException()
+        {
+        }
+
+        public AnalyzerProcessInterruptedException(string message)
+            : base(message)
+        {
+        }
+
+        public AnalyzerProcessInterruptedException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
+
+    }
+
 }

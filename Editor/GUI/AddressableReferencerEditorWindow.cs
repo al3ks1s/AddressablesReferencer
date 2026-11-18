@@ -41,6 +41,8 @@ namespace AddressableReferencer.Editor.GUI
 
         private const string kStreamingAssetPath = "Select the StreamingAssets folder";
         private string m_StreamingAssetPath = kStreamingAssetPath;
+        private const string kRelativeAssetsRootPath = "";
+        private string m_RelativeAssetsRootPath = kRelativeAssetsRootPath;
 
 
         SearchField m_SearchField;
@@ -74,6 +76,11 @@ namespace AddressableReferencer.Editor.GUI
                     if (m_analyzer == null)
                         m_StreamingAssetPath = kStreamingAssetPath;
                 }
+
+                if (!string.IsNullOrEmpty(AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot)) { 
+                    m_RelativeAssetsRootPath = AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot;
+                }
+
             }
 
             m_SearchField = new SearchField();
@@ -133,6 +140,7 @@ namespace AddressableReferencer.Editor.GUI
 
                 GUILayout.Label(m_StreamingAssetPath, EditorStyles.label);
                 GUILayout.FlexibleSpace();
+                GUILayout.Label(Path.Combine("Assets", m_RelativeAssetsRootPath), EditorStyles.label);
 
                 BuildAddressableReferences();
                 ClearReferences();
@@ -171,6 +179,7 @@ namespace AddressableReferencer.Editor.GUI
                 var menu = new GenericMenu();
 
                 menu.AddItem(new GUIContent("Set StreamingAssets Folder"), false, SelectStreamingAssetsPath);
+                menu.AddItem(new GUIContent("(Optional) Set Base Game Assets Folder"), false, SelectRelativeAssetsRootPath);
                 menu.AddItem(new GUIContent("Replace Assets"), false, ReplaceAssetReferences);
                 menu.AddItem(new GUIContent("Fast Test Stuff"), false, FastTest);
                 menu.AddSeparator(string.Empty);
@@ -212,7 +221,7 @@ namespace AddressableReferencer.Editor.GUI
                 menu.AddItem(new GUIContent("Clear Reference Overrides"), false, ClearMappingOverrides);
                 menu.AddSeparator(string.Empty);
                 menu.AddItem(new GUIContent("Clear Addressable Groups and Reference Mapping"), false, ClearAddressableGroups);
-
+                
                 menu.DropDown(gClearRect);
             }
         }
@@ -296,6 +305,8 @@ namespace AddressableReferencer.Editor.GUI
             if (!m_StreamingAssetPath.EndsWith(Path.DirectorySeparatorChar + "aa"))
                 m_StreamingAssetPath = Path.Join(m_StreamingAssetPath, "aa");
 
+            AddressableReferencerDefaultObject.Settings.ExternalStreamingAssetsFolder = m_StreamingAssetPath;
+
             m_analyzer = TryGetAnalyzer();
             
             if (m_analyzer == null)
@@ -305,13 +316,42 @@ namespace AddressableReferencer.Editor.GUI
                 m_StreamingAssetPath = kStreamingAssetPath;
                 return;
             }
-
-            AddressableReferencerDefaultObject.Settings.ExternalStreamingAssetsFolder = m_StreamingAssetPath;
-            
+            m_entryTree.Reload();
         }
+
+        private void SelectRelativeAssetsRootPath()
+        {
+            string relativePath = EditorUtility.OpenFolderPanel("Select Game Assets Root folder", "", "");
+
+            if (relativePath.Equals(string.Empty))
+                return;
+
+            relativePath = Path.GetFullPath(relativePath);
+            if (!relativePath.StartsWith(Path.GetFullPath(Application.dataPath))){ 
+                EditorUtility.DisplayDialog("Game Assets Root folder error", "Please select the Assets/ folder or a subdirectory of your Assets/ folder", "Ok");
+                AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot = "";
+                m_RelativeAssetsRootPath = AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot;
+                return;
+            }
+            Debug.Log($"{relativePath} {Path.GetFullPath(Application.dataPath)} {string.Equals(relativePath, Path.GetFullPath(Application.dataPath))}");
+            if (string.Equals(relativePath, Path.GetFullPath(Application.dataPath)))
+            {
+                AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot = "";
+                m_RelativeAssetsRootPath = AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot;
+                return;
+            }
+
+            relativePath = Path.GetRelativePath(Application.dataPath, relativePath);
+
+            AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot = relativePath;
+            m_RelativeAssetsRootPath = AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot;
+
+            m_entryTree.Reload();
+        }
+
         private CatalogAnalyzer TryGetAnalyzer()
         {
-            CatalogAnalyzer analyzer = new CatalogAnalyzer(m_StreamingAssetPath);
+            CatalogAnalyzer analyzer = new CatalogAnalyzer();
 
             string catalogPath = analyzer.TryFindCatalog();
 
@@ -382,13 +422,8 @@ namespace AddressableReferencer.Editor.GUI
                 return;
             }
 
-            ClearObjectMappings();
+            AddressableReferencerDefaultObject.Settings.ClearAddressableGroups();
 
-            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
-            foreach (var group in groups.ToArray())
-            {
-                AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(group);
-            }
             m_entryTree.Reload();
         }
         internal void ClearObjectMappings()
@@ -399,14 +434,7 @@ namespace AddressableReferencer.Editor.GUI
                 return;
             }
 
-            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
-            foreach (var group in groups.ToArray())
-            {
-                var schema = group.GetSchema<AddressableReferenceSchema>();
-                schema.Entries.Clear();
-            }
-
-            AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry = new();
+            AddressableReferencerDefaultObject.Settings.ClearObjectMappings();
 
             m_entryTree.Reload();
         }
@@ -425,6 +453,7 @@ namespace AddressableReferencer.Editor.GUI
             {
                 return;
             }
+            AddressableReferencerDefaultObject.Settings.ClearAddressableGroups();
             AddressableReferencerDefaultObject.ClearSettings();
             AddressableReferencerDefaultObject.InitialSetup();
             m_StreamingAssetPath = kStreamingAssetPath;
