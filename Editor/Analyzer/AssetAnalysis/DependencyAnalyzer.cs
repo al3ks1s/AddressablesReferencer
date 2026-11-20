@@ -18,7 +18,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
             AddressableAssetEntry entry;
             List<ObjectMapping> mappings = new List<ObjectMapping>();
 
-            AssetExternal assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId);
+            AssetExternal assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId, true);
 
             List<string> possibleAssets = new List<string>();
 
@@ -26,10 +26,10 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
             {
                 var tempObject = AssetDatabase.LoadMainAssetAtPath(d);
 
-                if (!tempObject.name.Equals(assetExt.baseField["m_Name"].AsString))
+                if (!tempObject.name.Equals(ReadUpTo(AssetManager, CabFile, assetExt.info, "m_Name")["m_Name"].AsString))
                     continue;
 
-                if (!tempObject.GetType().Name.Equals(assetExt.baseField.TypeName))
+                if (!tempObject.GetType().Name.Equals(GetAssetTypeName(assetExt)))
                     continue;
 
                 possibleAssets.Add(d);
@@ -37,14 +37,14 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             if (possibleAssets.Count > 1)
             {
-                Debug.LogError($"Found too many possible assets for {assetExt.baseField["m_Name"].AsString} of type {assetExt.baseField.TypeName}. Using exact match on name, recheck in mapping window \n\n{string.Join("\n", possibleAssets)}");
+                Debug.LogError($"Found too many possible assets for {ReadUpTo(AssetManager, CabFile, assetExt.info, "m_Name")["m_Name"].AsString} of type {GetAssetTypeName(assetExt)}. Using exact match on name, recheck in mapping window \n\n{string.Join("\n", possibleAssets)}");
                 return (null, null);
             }
 
             if (possibleAssets.Count == 0)
             {
                 // Create sub asset here if necessary
-                Debug.LogWarning($"No possible assets for {assetExt.baseField["m_Name"].AsString} of type {assetExt.baseField.TypeName}, check if it exists");
+                Debug.LogWarning($"No possible assets for {ReadUpTo(AssetManager, CabFile, assetExt.info, "m_Name")["m_Name"].AsString} of type {GetAssetTypeName(assetExt)}, check if it exists");
                 return (null, null);
             }
 

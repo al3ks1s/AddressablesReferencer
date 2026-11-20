@@ -41,7 +41,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             AssetDependencies deps = new(AssetManager, CabFile);
             var assetDeps = deps.FindImmediateDeps(pathId);
-            AssetExternal mainAsset = AssetManager.GetExtAsset(CabFile, 0, pathId);
+            AssetExternal mainAsset = AssetManager.GetExtAsset(CabFile, 0, pathId, true);
 
             if (currentGO.GetComponentCount() != assetDeps.InternalPaths.Count)
             {
@@ -72,7 +72,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
             }
             else
             {
-                Debug.LogError($"Prefab Analysis for {currentGO.name} | {mainAsset.baseField["m_Name"].AsString} in bundle {Path.GetFileNameWithoutExtension(Location.InternalId)}: Theres a mismatching amount of child game objects between editor and bundle. Editor:{currentGO.transform.childCount} Bundle:{childGOs.InternalPaths.Count}");
+                Debug.LogError($"Prefab Analysis for {currentGO.name} | {ReadUpTo(AssetManager, CabFile, mainAsset.info, "m_Name")["m_Name"].AsString} in bundle {Path.GetFileNameWithoutExtension(Location.InternalId)}: Theres a mismatching amount of child game objects between editor and bundle. Editor:{currentGO.transform.childCount} Bundle:{childGOs.InternalPaths.Count}");
             }
 
             return objects;

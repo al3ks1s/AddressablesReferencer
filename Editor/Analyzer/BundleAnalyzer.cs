@@ -16,10 +16,11 @@ using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using static UnityEditor.AddressableAssets.Build.Layout.BuildLayout;
 
 namespace AddressableReferencer.Editor.Analyzer
 {
-    public class BundleAnalyzer
+    public class BundleAnalyzer : IDisposable
     {
 
         public string StreamingAssetsPath;
@@ -112,17 +113,22 @@ namespace AddressableReferencer.Editor.Analyzer
             }
         }
 
+        private int _assetCount = -1;
+
         public int AssetCount
         {
             get
             {
-                if (!IsLoaded)
+                if (!IsLoaded && mgr != null)
                     return 0;
 
-                var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
-                var assetCount = bundleBase["m_Container.Array"].AsArray.size;
+                if (_assetCount != -1)
+                    return _assetCount;
 
-                return assetCount;
+                var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+                _assetCount = bundleBase["m_Container.Array"].AsArray.size;
+
+                return _assetCount;
             }
         }
 
@@ -141,18 +147,25 @@ namespace AddressableReferencer.Editor.Analyzer
             StreamingAssetsPath = streamingAssetPath;
             RelativeAssetsRoot = relativeAssetsRoot;
 
-            schema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
-            referenceSchema = (AddressableReferenceSchema)assetGroup.Schemas.Find(s => s is AddressableReferenceSchema);
+            try { 
+                schema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
+                referenceSchema = (AddressableReferenceSchema)assetGroup.Schemas.Find(s => s is AddressableReferenceSchema);
 
-            if (monoscript != null)
-            {
-                monoscriptLocation = monoscript;
-                LoadMonoscript();
+                if (monoscript != null)
+                {
+                    monoscriptLocation = monoscript;
+                    LoadMonoscript();
+                }
+
+                LoadBundle();
+                
+                IsLoaded = true;
             }
-
-            LoadBundle();
-
-            IsLoaded = true;
+            catch 
+            {
+                Cleanup();
+                throw;
+            }
         }
 
         public void LoadBundle()
@@ -191,32 +204,42 @@ namespace AddressableReferencer.Editor.Analyzer
 
             if (referenceEntry.isDone)
             {
-                if (!progressTracker.UpdateInfo($"Bundle has already been processed, skipping."))
+                Cleanup();
+                if (!progressTracker.UpdateInfo($"Bundle has already been processed, skipping.")) {
+                    
                     throw new AnalyzerProcessInterruptedException("Process was interrupted by user.");
-
-                mgr.UnloadAll();
-                rfa.Dispose();
+                }
                 return;
             }
 
-            var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
-            bool isScene = bundleBase["m_IsStreamedSceneAssetBundle"].AsBool;
-
-            if (isScene)
+            try
             {
-                mgr.UnloadAll();
-                rfa.Dispose();
-                return;
+                var bundleBase = mgr.GetBaseField(CABFile, assetBundle);
+                bool isScene = bundleBase["m_IsStreamedSceneAssetBundle"].AsBool;
+
+                if (isScene)
+                {
+                    return;
+                }
+
+                AnalyzeAssets();
+                GenerateBundleName();
+                referenceEntry.isDone = true;
             }
-
-            AnalyzeAssets();
-            GenerateBundleName();
-
-            referenceEntry.isDone = true;
-
-            mgr.UnloadAll();
-            rfa.Dispose();
-
+            catch (AnalyzerProcessInterruptedException)
+            {
+                referenceEntry.isDone = false;
+                throw;
+            }
+            catch (Exception ex2)
+            {
+                referenceEntry.isDone = false;
+                Debug.LogError(ex2);
+            }
+            finally
+            {
+                Cleanup();
+            }
         }
         public void AnalyzeAssets()
         {
@@ -245,8 +268,8 @@ namespace AddressableReferencer.Editor.Analyzer
                 foreach (var asset in bundleBase["m_Container.Array"])
                 {
                     string path = GetAssetPath(asset["first"].AsString);
-
                     long pathId = asset["second.asset.m_PathID"].AsLong;
+
                     var assetExt = mgr.GetExtAsset(CABFile, 0, pathId, true);
 
                     if (!progressTracker.UpdateInfo($"({++counter}/{AssetCount}) - Processing: {Path.GetFileName(path)}"))
@@ -266,6 +289,26 @@ namespace AddressableReferencer.Editor.Analyzer
             }
         }
 
+        public void Cleanup()
+        {
+            if (mgr != null)
+                mgr.UnloadAll();
+    
+            if (rfa != null)
+                rfa.Dispose();
+
+            mgr = null;
+            rfa = null;
+
+
+            bundle = null;
+            CABFile = null;
+            assetBundle = null;
+            monoscriptLocation = null;
+            monoscriptBundle = null;
+            monoscriptFile = null;
+                
+        }
 
         public void GenerateBundleName()
         {
@@ -322,6 +365,28 @@ namespace AddressableReferencer.Editor.Analyzer
             return Path.Combine(CatalogAnalyzer.AssetRoot, RelativeAssetsRoot, Path.GetRelativePath(CatalogAnalyzer.AssetRoot, ContainerPath)).Replace("\\", "/");
         }
 
+
+        protected string GetAssetTypeName(AssetExternal assetExt)
+        {
+            string assetType = Enum.GetName(typeof(AssetClassID), assetExt.info.TypeId) ?? assetExt.info.TypeId.ToString();
+
+            if (assetExt.info.TypeId == (int)AssetClassID.MonoBehaviour)
+            {
+                ushort idx = assetExt.info.GetScriptIndex(CABFile.file);
+                if (idx != 0xFFFF && idx < CABFile.file.Metadata.ScriptTypes.Count)
+                {
+                    long monoscriptPathID = CABFile.file.Metadata.ScriptTypes[idx].PathId;
+                    assetType = mgr.GetExtAsset(monoscriptFile, 0, monoscriptPathID).baseField["m_ClassName"].AsString;
+                }
+            }
+
+            return assetType;
+        }
+
+        public void Dispose()
+        {
+            Cleanup();
+        }
     }
 
     public class BuiltInBundleAnalyzer
@@ -383,7 +448,7 @@ namespace AddressableReferencer.Editor.Analyzer
         {
             if (referenceEntry.isDone)
             {
-                rfa.Dispose();
+                Cleanup();
                 return;
             }
 
@@ -393,10 +458,7 @@ namespace AddressableReferencer.Editor.Analyzer
 
             referenceEntry.isDone = true;
 
-            mgr.UnloadAll();
-            GC.Collect();
-
-            rfa.Dispose();
+            Cleanup();
         }
 
         public void AnalyzeAssets()
@@ -434,6 +496,24 @@ namespace AddressableReferencer.Editor.Analyzer
                 ObjectIdentifier.TryGetObjectIdentifier(potentialObjects.First(), out var obid);
                 referenceEntry.m_ObjectMapping.Add(new ObjectMapping(obid, asset.PathId));
             }
+        }
+
+        public void Cleanup()
+        {
+            if (mgr != null)
+                mgr.UnloadAll();
+
+            if (rfa != null)
+                rfa.Dispose();
+
+            mgr = null;
+            rfa = null;
+
+
+            bundle = null;
+            CABFile = null;
+            assetBundle = null;
+
         }
     }
 }

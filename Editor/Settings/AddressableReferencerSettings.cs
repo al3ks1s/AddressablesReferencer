@@ -77,7 +77,7 @@ namespace AddressableReferencer.Editor.Settings
         public void ClearObjectMappings()
         {
 
-            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
+            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.HasSchema<AddressableReferenceSchema>());
             foreach (var group in groups.ToArray())
             {
                 var schema = group.GetSchema<AddressableReferenceSchema>();
@@ -91,7 +91,7 @@ namespace AddressableReferencer.Editor.Settings
         {
             ClearObjectMappings();
 
-            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
+            var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.HasSchema<AddressableReferenceSchema>());
             foreach (var group in groups.ToArray())
             {
                 AddressableAssetSettingsDefaultObject.Settings.RemoveGroup(group);

@@ -110,6 +110,21 @@ namespace AddressableReferencer.Editor.GUI
             m_entryTree.OnGUI(treeRect);
         }
 
+        public void OnDisable()
+        {
+            
+        }
+
+        public void OnDestroy()  
+        {
+            if (m_analyzer != null)
+            {
+                m_analyzer.UnloadCatalog();
+                m_analyzer.CleanupMemory();
+            }
+        }
+
+
         public void DisplaySettingsMessage()
         {
             GUILayout.Space(50);
@@ -333,7 +348,7 @@ namespace AddressableReferencer.Editor.GUI
                 m_RelativeAssetsRootPath = AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot;
                 return;
             }
-            Debug.Log($"{relativePath} {Path.GetFullPath(Application.dataPath)} {string.Equals(relativePath, Path.GetFullPath(Application.dataPath))}");
+
             if (string.Equals(relativePath, Path.GetFullPath(Application.dataPath)))
             {
                 AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot = "";
@@ -346,6 +361,14 @@ namespace AddressableReferencer.Editor.GUI
             AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot = relativePath;
             m_RelativeAssetsRootPath = AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot;
 
+            m_analyzer = TryGetAnalyzer(); 
+            if (m_analyzer == null)
+            {
+                EditorUtility.DisplayDialog("Streaming Asset Path Error", "The provided folder does not contain a catalog, or an error occured while loading the catalog", "Ok");
+                AddressableReferencerDefaultObject.Settings.ExternalStreamingAssetsFolder = string.Empty;
+                m_StreamingAssetPath = kStreamingAssetPath;
+            }
+            
             m_entryTree.Reload();
         }
 
@@ -365,6 +388,12 @@ namespace AddressableReferencer.Editor.GUI
             {
                 m_StreamingAssetPath = "Select the StreamingAssets folder";
                 return null;
+            }
+
+            if (m_analyzer != null)
+            {
+                m_analyzer.UnloadCatalog();
+                m_analyzer.CleanupMemory();
             }
 
             return analyzer;

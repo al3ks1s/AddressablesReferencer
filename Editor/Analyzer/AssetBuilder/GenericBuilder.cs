@@ -1,5 +1,6 @@
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Settings;
@@ -41,8 +42,8 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
 
         public virtual string CreateMissingAsset(long pathId, string assetPath)
         {
-            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId);
-            Debug.LogWarning($"Create missing asset unimplemented for {assetPath} of type {assetExt.baseField.TypeName}");
+            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId, true);
+            Debug.LogWarning($"Create missing asset unimplemented for {assetPath} of type {GetAssetTypeName(assetExt)}");
             return string.Empty;
         }
 
@@ -63,6 +64,22 @@ namespace AddressableReferencer.Editor.Analyzer.AssetBuilder
             return false;
         }
 
+        protected string GetAssetTypeName(AssetExternal assetExt)
+        {
+            string assetType = Enum.GetName(typeof(AssetClassID), assetExt.info.TypeId) ?? assetExt.info.TypeId.ToString();
+
+            if (assetExt.info.TypeId == (int)AssetClassID.MonoBehaviour)
+            {
+                ushort idx = assetExt.info.GetScriptIndex(CabFile.file);
+                if (idx != 0xFFFF && idx < CabFile.file.Metadata.ScriptTypes.Count)
+                {
+                    long monoscriptPathID = CabFile.file.Metadata.ScriptTypes[idx].PathId;
+                    assetType = AssetManager.GetExtAsset(MonoscriptFile, 0, monoscriptPathID).baseField["m_ClassName"].AsString;
+                }
+            }
+
+            return assetType;
+        }
 
     }
 

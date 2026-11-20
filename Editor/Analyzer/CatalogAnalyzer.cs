@@ -54,6 +54,7 @@ namespace AddressableReferencer.Editor.Analyzer
 
         public bool LoadCatalog(string catalogPath)
         {
+            UnloadCatalog();
             NewTracker();
 
             if (StreamingAssetsPath.Equals(string.Empty)) {
@@ -66,6 +67,13 @@ namespace AddressableReferencer.Editor.Analyzer
             Addressables.InitializeAsync().WaitForCompletion();
             LocatorHandle = Addressables.LoadContentCatalogAsync(catalogPath);
             Locator = LocatorHandle.WaitForCompletion();
+
+            if (LocatorHandle.Status != AsyncOperationStatus.Succeeded)
+            {
+                UnloadCatalog();
+                CleanupMemory();
+                return false;
+            }
 
             bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
             monoscript = TryFindMonoscriptBundle();
@@ -80,8 +88,17 @@ namespace AddressableReferencer.Editor.Analyzer
 
         public void UnloadCatalog()
         {
+
+            if (Locator != null)
+                Addressables.RemoveResourceLocator(Locator);
+
+
+            if (LocatorHandle.IsValid())
+                LocatorHandle.Release();
+
+            LocatorHandle = default;
             Locator = null;
-            LocatorHandle.Release();
+            
         }
 
         public string TryFindCatalog(string catalogName = "catalog.bin")
@@ -149,6 +166,8 @@ namespace AddressableReferencer.Editor.Analyzer
             - Default/Unknown -> Packed together 
 
             */
+
+            NewTracker();
 
             groupMapping.Clear();
             labelBundles = new();
@@ -285,11 +304,16 @@ namespace AddressableReferencer.Editor.Analyzer
                         monoscript: monoscript
                     );
                     ba.progressTracker = progressTracker;
-
-                    if (!analyzers.Contains(ba))
-                        analyzers.Add(ba);
+                    analyzers.Add(ba);
 
                     ba.ProcessBundle();
+                    ba.Cleanup();
+
+                    if (counter % 100 == 0)
+                    {
+                        GC.Collect();
+                        // EditorUtility.UnloadUnusedAssetsImmediate();
+                    }
 
                 }
 
@@ -300,7 +324,7 @@ namespace AddressableReferencer.Editor.Analyzer
                 SaveReferenceSchemas();
 
             } 
-            catch (AnalyzerProcessInterruptedException e)
+            catch (AnalyzerProcessInterruptedException)
             {               
                 if (EditorUtility.DisplayDialog("Process interrupted", "Analyzer process was interrupted. The bundles were only partially processed.\n\nDo you want to clear Referencer Data?", "Clear", "Ignore")){
                     var groups = AddressableAssetSettingsDefaultObject.Settings.groups.Where(g => g.SchemaTypes.Contains(typeof(AddressableReferenceSchema)));
@@ -318,11 +342,15 @@ namespace AddressableReferencer.Editor.Analyzer
                 var endTime = DateTime.Now;
                 var elapsedSeconds = (endTime - startTime).TotalSeconds;
                 Debug.Log($"Addressables Referencer analysis completed in {elapsedSeconds}s.");
+                
+                analyzers.Clear();
+
+                // EditorUtility.UnloadUnusedAssetsImmediate();
 
                 ClearTracker();
             }
 
-            GC.Collect();
+            
         }
         public void ProcessBuiltInBundle()
         {
@@ -583,9 +611,18 @@ namespace AddressableReferencer.Editor.Analyzer
 
         private void ClearTracker()
         {
-            if (progressTracker != null)
+            if (progressTracker != null) { 
                 progressTracker.Dispose();
+                progressTracker = null;
+            }
         }
+    
+    
+        public void CleanupMemory()
+        {
+            // EditorUtility.UnloadUnusedAssetsImmediate();
+        }
+    
     }
 
     public class AnalyzerProcessInterruptedException : Exception

@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Build.Layout;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
@@ -16,19 +17,9 @@ using UnityEngine.ResourceManagement.ResourceLocations;
 
 namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 {
+
     public class GenericAnalyzer
     {
-        public static GenericAnalyzer GetAnalyzer(string assetType, BundleAnalyzer parentAnalyzer)
-        {
-
-            return assetType switch
-            {
-                "Folder" => new FolderAnalyzer(parentAnalyzer),
-                "SpriteAtlas" => new SpriteAtlasAnalyzer(parentAnalyzer),
-                "GameObject" => new PrefabAnalyzer(parentAnalyzer),
-                _ => new GenericAnalyzer(parentAnalyzer),
-            };
-        }
 
         public static GenericAnalyzer GetAnalyzer(int assetType,  BundleAnalyzer parentAnalyzer)
         {
@@ -63,7 +54,8 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
         public virtual (AddressableAssetEntry, List<ObjectMapping>) Analyze(long pathId, string assetPath)
         {
-            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId);
+
+            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId, true);
 
             if (CheckMissingAsset(assetPath, pathId, out var assetGUID, out var newPath))
             {
@@ -71,12 +63,10 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
                 return (null, null);
             }
 
-            string assetType = assetExt.baseField.TypeName;
+            //string assetType = assetExt.baseField.TypeName;
+            string assetType = GetAssetTypeName(assetExt);
 
-            if (assetType == "MonoBehaviour")
-                assetType = AssetManager.GetExtAsset(MonoscriptFile, 0, assetExt.baseField["m_Script.m_PathID"].AsLong).baseField["m_ClassName"].AsString;
-
-            if (AssetDatabase.GetMainAssetTypeAtPath(newPath).Name != assetType && !IsSubAssetRepresentation(assetExt, assetPath))
+            if (AssetDatabase.GetMainAssetTypeAtPath(newPath).Name != assetType && !IsSubAssetRepresentation(assetExt, newPath))
             {
                 var subAnalyzer = new DependencyAnalyzer(m_parentAnalyzer);
                 return subAnalyzer.Analyze(pathId, assetPath);
@@ -109,13 +99,14 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
                 true
             );
 
-            if (entry != null)
+            if (entry != null) { 
                 entry.SetAddress(assetPath);
 
-            if (Labels != null)
-            {
-                foreach(var label in Labels) {
-                    entry.SetLabel(label, true);
+                if (Labels != null)
+                {
+                    foreach (var label in Labels) {
+                        entry.SetLabel(label, true);
+                    }
                 }
             }
 
@@ -125,7 +116,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
         public virtual ObjectMapping CreateAssetReference(long pathId, string assetGUID, string assetPath)
         {
 
-            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId);
+            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId, true);
 
             ObjectIdentifier obid = new();
             ObjectIdentifier[] assetRepresentations = ContentBuildInterface.GetPlayerAssetRepresentations(new GUID(assetGUID), EditorUserBuildSettings.activeBuildTarget);
@@ -144,7 +135,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
             if (obid.localIdentifierInFile != 0)
                 return new ObjectMapping(obid, pathId);
 
-            Debug.LogWarning($"Asset {assetPath} of type {assetExt.baseField.TypeName} couldn't be matched to an asset representation.");
+            Debug.LogWarning($"Asset {assetPath} of type {GetAssetTypeName(assetExt)} couldn't be matched to an asset representation.");
             
             return null;
 
@@ -169,12 +160,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
         protected bool CheckAsset(UnityEngine.Object obj, AssetExternal assetExt)
         {
 
-            string actualType = assetExt.baseField.TypeName;
-
-            if (actualType == "MonoBehaviour")
-            {
-                actualType = AssetManager.GetExtAsset(MonoscriptFile, 0, assetExt.baseField["m_Script.m_PathID"].AsLong).baseField["m_ClassName"].AsString;
-            }
+            string actualType = GetAssetTypeName(assetExt);
 
             if (actualType == "Shader")
             {
@@ -183,7 +169,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             // Debug.Log($"Type : id{assetExt.info.TypeId} {Enum.GetName(typeof(AssetClassID), assetExt.info.TypeId)}");
 
-            return (obj.GetType().Name == actualType && obj.name == assetExt.baseField["m_Name"].AsString);
+            return (obj.GetType().Name == actualType && obj.name == ReadUpTo(AssetManager, CabFile, assetExt.info, "m_Name")["m_Name"].AsString);
 
         }
 
@@ -198,7 +184,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
                 if (tempAssetGUID.Equals(""))
                 {
-                    assetGUID = CreateMissingAsset(AssetManager.GetExtAsset(CabFile, 0, pathId).baseField.TypeName, assetPath, pathId);
+                    assetGUID = CreateMissingAsset(GetAssetTypeName(AssetManager.GetExtAsset(CabFile, 0, pathId, true)), assetPath, pathId);
                 }
                 else
                 {
@@ -217,9 +203,9 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
 
             var assetGUID = string.Empty;
 
-            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId);
+            var assetExt = AssetManager.GetExtAsset(CabFile, 0, pathId, true);
 
-            var internalAssetName = assetExt.baseField["m_Name"].AsString;
+            var internalAssetName = ReadUpTo(AssetManager, CabFile, assetExt.info, "m_Name")["m_Name"].AsString;
             var extension = assetPath.Split(".").Last();
             var basePath = assetPath.Replace($".{extension}", "");
             var folderPath = Path.GetDirectoryName(assetPath);
@@ -246,7 +232,7 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
                 return assetGUID;
 
 
-            var formats = FileFormatList.GetFormatList(assetExt.baseField.TypeName);
+            var formats = FileFormatList.GetFormatList(GetAssetTypeName(assetExt));
             if (formats != null && assetGUID.Equals(""))
             {
                 foreach (var format in formats)
@@ -272,6 +258,32 @@ namespace AddressableReferencer.Editor.Analyzer.AssetAnalysis
         protected string CreateMissingAsset(string assetType, string assetPath, long pathId)
         {
             return GenericBuilder.GetBuilder(assetType, m_parentAnalyzer).CreateMissingAsset(pathId, assetPath);
+        }
+
+
+        protected string GetAssetTypeName(AssetExternal assetExt)
+        {
+            string assetType = Enum.GetName(typeof(AssetClassID), assetExt.info.TypeId) ?? assetExt.info.TypeId.ToString();
+
+            if (assetExt.info.TypeId == (int)AssetClassID.MonoBehaviour && MonoscriptFile != null)
+            {
+                ushort idx = assetExt.info.GetScriptIndex(CabFile.file);
+                if (idx != 0xFFFF && idx < CabFile.file.Metadata.ScriptTypes.Count) {
+                    long monoscriptPathID = CabFile.file.Metadata.ScriptTypes[idx].PathId;
+                    assetType = AssetManager.GetExtAsset(MonoscriptFile, 0, monoscriptPathID).baseField["m_ClassName"].AsString;
+                }
+            }
+            
+            return assetType;
+        }
+
+        public static AssetTypeValueField ReadUpTo(AssetsManager mgr, AssetsFileInstance f, AssetFileInfo info, string lastField)
+        {
+            var tpl = mgr.GetTemplateBaseField(f, info).Clone();     
+            int idx = tpl.Children.FindIndex(c => c.Name == lastField);
+            if (idx >= 0)
+                tpl.Children.RemoveRange(idx + 1, tpl.Children.Count - idx - 1);
+            return tpl.MakeValue(f.file.Reader, info.GetAbsoluteByteOffset(f.file));
         }
 
     }
