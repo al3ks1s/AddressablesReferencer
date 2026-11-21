@@ -24,10 +24,6 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
     {
         public string Name => "Swap Internal Id";
 
-        public void Build(BuildContext buildContext, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
-        {
-            throw new System.NotImplementedException();
-        }
 
         Dictionary<string, AddressableReferenceEntry> m_internalNameToReferenceEntry = new();
 

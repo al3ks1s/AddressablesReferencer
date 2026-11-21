@@ -1,5 +1,3 @@
-using AddressableReferencer.Editor.Settings;
-using AddressableReferencer.Editor.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,17 +5,14 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
-using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
-using UnityEditor.AddressableAssets.Build.CatalogBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
-using UnityEditor.Build.Pipeline.Interfaces;
-using UnityEditor.Build.Pipeline.Utilities;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using static UnityEngine.GraphicsBuffer;
 
 namespace AddressableReferencer.Editor.Build.SchemaBuilders
 {
@@ -42,20 +37,49 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
-            throw new NotImplementedException();
+            return schema is ExportCatalogSchema;
         }
-
-        public bool CanBuildSchema(AddressableAssetGroupSchema schema)
+        
+        /// <inheritdoc/>
+        public Dictionary<string, List<ContentCatalogDataEntry>> GenerateCatalogLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
         {
-            throw new NotImplementedException();
-        }
+            if (m_buildPathToGroups.Count == 0) 
+                return null;
+            
+            GatherCommonBundleLocations(aaContext);
 
-        public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
-        {
-            throw new NotImplementedException();
-        }
+            foreach (var BuildPathVar in m_buildPathToGroups.Keys)
+            {
+                var groups = m_buildPathToGroups[BuildPathVar];
+                var buildTargets = m_buildPathToTargets[BuildPathVar];
 
-        public void GenerateContentUpdate(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
+                var buildPath = aaContext.Settings.profileSettings.GetValueByName(aaContext.Settings.activeProfileId, BuildPathVar);
+                var loadPath = aaContext.Settings.profileSettings.GetValueByName(aaContext.Settings.activeProfileId, BuildPathVar.Replace("BuildPath", "LoadPath"));
+                                 
+                List<ContentCatalogDataEntry> entries = new List<ContentCatalogDataEntry>();
+                foreach (var group in groups)
+                {
+                    var groupLocations = GatherAddressableGroupCatalogEntries(aaContext, group);
+                    entries.AddRange(groupLocations);
+                }
+
+                foreach (var target in buildTargets)
+                {
+                    string catalogId = $"{BuildPathVar}-{target}";
+                    var generatedCatalog = CreateCatalogForGroupsTargetPair(aaContext, entries, loadPath, target);
+                    additionalCatalogs[catalogId] = generatedCatalog;
+                }
+            }
+            return additionalCatalogs;
+        }
+        
+        /// <summary>
+        /// Function used to copy the catalogs created by this schema builder to their respective BuildPaths. 
+        /// The function is repurposed to bypass the need of rewriting parts of the main build logic.
+        /// </summary>
+        /// <param name="aaContext"></param>
+        /// <param name="addrResult"></param>
+        public void GenerateContentUpdate(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult) 
         {
             if (m_buildPathToGroups.Count == 0)
                 return;
@@ -173,7 +197,11 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 groupEntries.AddRange(locations.Value);
             }
 
-        public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
+            return groupEntries;
+        }
+
+        // Catalog Creation
+        private List<ContentCatalogDataEntry> CreateCatalogForGroupsTargetPair(AddressableAssetsBuildContext aaContext, List<ContentCatalogDataEntry> locations, string BuildPath, BuildTarget target)
         {
             List<ContentCatalogDataEntry> newCatalog = new();
 
