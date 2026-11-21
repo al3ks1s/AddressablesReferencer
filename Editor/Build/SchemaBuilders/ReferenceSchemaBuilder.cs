@@ -60,7 +60,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         /// <inheritdoc/>
         public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
         {
-            throw new System.NotImplementedException();
+            ProcessBuiltInBundle(aaContext);
         }
         
         /// <inheritdoc/>
@@ -86,19 +86,29 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             {
                 m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
 
-        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog)
-        {
-            throw new System.NotImplementedException();
-        }
+                foreach (var map in entry.ObjectMappingDict)
+                {
+                    m_objectReferences.TryAdd(map.Key, map.Value);
+                }
+            }
 
-        public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
-        {
-            throw new System.NotImplementedException();
+            return string.Empty;
         }
-
-        public bool IsDataBuilt()
+        private void ProcessBuiltInBundle(AddressableAssetsBuildContext aaContext)
         {
-            throw new System.NotImplementedException();
+            if (!AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
+                return;
+
+            var entry = AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry;
+            entry.internalName = IResourceLocationExtension.GetBuiltInBundleNamePrefix(aaContext) + $"{BuildScriptBase.BuiltInBundleBaseName}.bundle";
+            AddressableReferencerDefaultObject.Settings.Save();
+
+            m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
+
+            foreach (var map in entry.ObjectMappingDict)
+            {
+                m_objectReferences.TryAdd(map.Key, map.Value);
+            }
         }
 
 
