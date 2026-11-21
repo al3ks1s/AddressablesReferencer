@@ -43,7 +43,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
-            throw new NotImplementedException();
+            return schema is ExportCatalogSchema;
         }
 
         public void Build(BuildContext buildContext, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult) 
@@ -62,15 +62,43 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 catalogs.Add(GenerateContentCatalog(catalogId, additionalCatalogs[catalogId], builderInput, aaContext, addrResult));
             }
 
-        public void GenerateTypeStrippingInfo(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ContentCatalogData contentCatalog)
-        {
-            throw new NotImplementedException();
-        }
+            if (catalogs.Count != 0) 
+            { 
+                foreach (var catalog in additionalCatalogs)
+                {
+                    string basePath = Path.Combine(Addressables.BuildPath, catalog.Key);
+                    string varName = catalog.Key.Split("-").First();
 
-        public void Init(AddressableAssetsBuildContext aaContext, IDataBuilder dataBuilder)
-        {
-            throw new NotImplementedException();
+                    string outputPath = aaContext.Settings.profileSettings.GetValueByName(aaContext.Settings.activeProfileId, varName);
+                    outputPath = aaContext.Settings.profileSettings.EvaluateString(aaContext.Settings.activeProfileId, outputPath);
+
+                    CopyCatalogToOutputPath(basePath, outputPath, "catalog");
+                }
+            }
+            return catalogs;
         }
+                
+        public Dictionary<string, List<ContentCatalogDataEntry>> GenerateCatalogLocations(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
+        {
+            if (m_buildPathToGroups.Count == 0) 
+                return null;
+            
+            GatherCommonBundleLocations(aaContext);
+
+            foreach (var BuildPathVar in m_buildPathToGroups.Keys)
+            {
+                var groups = m_buildPathToGroups[BuildPathVar];
+                var buildTargets = m_buildPathToTargets[BuildPathVar];
+
+                var buildPath = aaContext.Settings.profileSettings.GetValueByName(aaContext.Settings.activeProfileId, BuildPathVar);
+                var loadPath = aaContext.Settings.profileSettings.GetValueByName(aaContext.Settings.activeProfileId, BuildPathVar.Replace("BuildPath", "LoadPath"));
+                                 
+                List<ContentCatalogDataEntry> entries = new List<ContentCatalogDataEntry>();
+                foreach (var group in groups)
+                {
+                    var groupLocations = GatherAddressableGroupCatalogEntries(aaContext, group);
+                    entries.AddRange(groupLocations);
+                }
 
                 foreach (var target in buildTargets)
                 {
