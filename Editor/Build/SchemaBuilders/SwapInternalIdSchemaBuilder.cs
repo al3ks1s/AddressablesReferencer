@@ -1,6 +1,7 @@
 using AddressableReferencer.Editor.Settings;
 using AddressableReferencer.Editor.Utilities;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
@@ -9,6 +10,7 @@ using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
+using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 namespace AddressableReferencer.Editor.Build.SchemaBuilders
 {
@@ -34,8 +36,49 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
         public void Build(BuildContext buildContext, AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, ExtractDataTask extractData, List<CachedAssetState> cachedState, AddressablesPlayerBuildResult addrResult)
         {
-            throw new System.NotImplementedException();
+            ProcessBundleLocations(aaContext);
+            ProcessNonBundleLocations(aaContext);
         }
+
+
+        public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
+        {
+            if (!CanBuildSchema(schema))
+                return string.Empty;
+
+            if (schema is AddressableReferenceSchema)
+                return ProcessGroupReferenceSchema(schema as AddressableReferenceSchema, assetGroup, aaContext);
+
+            return string.Empty;
+        }
+        public string ProcessGroupReferenceSchema(AddressableReferenceSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
+        {
+            var pSchema = schema as AddressableReferenceSchema;
+
+            BundledAssetGroupSchema bundleSchema = (BundledAssetGroupSchema)assetGroup.Schemas.Find(s => s is BundledAssetGroupSchema);
+
+            if (pSchema == null ||
+                bundleSchema == null ||
+                !pSchema.IsEnabled ||
+                !pSchema.ReferenceEnabled ||
+                !bundleSchema.IncludeInBuild ||
+                !bundleSchema.IsEnabled ||
+                !assetGroup.entries.Any())
+                return string.Empty;
+
+            foreach (var entry in pSchema.Entries)
+            {
+                m_internalNameToReferenceEntry.TryAdd(entry.internalName, entry);
+            }
+
+            return string.Empty;
+        }
+
+
+        public void ProcessBundleLocations(AddressableAssetsBuildContext aaContext)
+        {
+            var referenceGroups = aaContext.Settings.groups.Where(g => g.IsReferenceGroup() && g.GetSchema<BundledAssetGroupSchema>().IncludeInBuild && g.GetSchema<BundledAssetGroupSchema>().IsEnabled);
+            List<(ContentCatalogDataEntry, AddressableReferenceEntry)> referenceLocations = new();
 
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
@@ -62,18 +105,38 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             }
         }
 
-
-        public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
+        public void ProcessNonBundleLocations(AddressableAssetsBuildContext aaContext)
         {
-            throw new System.NotImplementedException();
+            var nonBundleLocations = aaContext.locations.Where(l => l.Provider != "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider");
+
+            string GameRoot = Path.Combine("Assets", AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot).Replace("\\", "/");
+
+            foreach (var nonBundleLocation in nonBundleLocations)
+            {
+                var internalId = nonBundleLocation.InternalId;
+                var locationGuid = AssetDatabase.AssetPathToGUID(internalId);
+
+                bool isReference = aaContext.Settings.FindAssetEntry(locationGuid).parentGroup.HasSchema<AddressableReferenceSchema>();
+
+                if (!isReference)
+                    continue;
+
+                
+                string AssetRelativePath = Path.GetRelativePath(GameRoot, internalId);
+                string newInternalId = Path.Combine("Assets", AssetRelativePath).Replace("\\", "/");
+
+                nonBundleLocation.InternalId = newInternalId;
+            }
+
         }
 
-        public bool IsDataBuilt()
-        {
-            throw new System.NotImplementedException();
-        }
 
-        public string ProcessGroupSchema(AddressableAssetGroupSchema schema, AddressableAssetGroup assetGroup, AddressableAssetsBuildContext aaContext)
+
+        static string StripHashFromBundleLocation(string hashedBundleLocation)
+        {
+            return hashedBundleLocation.Remove(hashedBundleLocation.LastIndexOf('_')) + ".bundle";
+        }
+        private void FormatLocationFromReferenceEntry(ContentCatalogDataEntry catalogLocation, AddressableReferenceEntry referenceEntry)
         {
             throw new System.NotImplementedException();
         }

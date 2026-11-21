@@ -53,7 +53,10 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
         {
             List<ContentCatalogData> catalogs = new();
-            
+
+            if (additionalCatalogs == null)
+                return catalogs;
+
             foreach (var catalogId in additionalCatalogs.Keys)
             {
                 catalogs.Add(GenerateContentCatalog(catalogId, additionalCatalogs[catalogId], builderInput, aaContext, addrResult));
