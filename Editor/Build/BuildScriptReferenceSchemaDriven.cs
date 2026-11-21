@@ -1,8 +1,18 @@
 using AddressableReferencer.Editor.Build.SchemaBuilders;
+using AddressableReferencer.Editor.Settings;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.RegularExpressions;
+using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Build.DataBuilders.SchemaBuilders;
+using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Build.Content;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.ResourceLocators;
 
 namespace AddressableReferencer.Editor.Build {
 
@@ -13,16 +23,10 @@ namespace AddressableReferencer.Editor.Build {
     public class BuildScriptReferenceSchemaDriven : BuildScriptSchemaDriven
     {
 
-        protected override TResult BuildDataImplementation<TResult>(AddressablesDataBuilderInput builderInput)
-        {
-            throw new NotImplementedException("Building with references isn't supported on this branch of Addressables Referencer, please use either Addressables-3 or Addressables-4, look at the documentation to select a branch.");
-        }
-
         /// <inheritdoc />
         public override ISchemaBuilder[] CreateSchemaBuilders()
         {
             return new ISchemaBuilder[] {
-                new ReferenceSchemaBuilder(),
                 new BundledAssetSchemaBuilder(),
 #if ENABLE_CONTENT_DIRECTORIES
                 new ContentDirectorySchemaBuilder(),

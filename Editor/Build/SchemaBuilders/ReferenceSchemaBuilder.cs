@@ -1,20 +1,29 @@
 using AddressableReferencer.Editor.Settings;
+using AddressableReferencer.Editor.Utilities;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
-using UnityEditor.AddressableAssets.Build.BuildPipelineTasks;
 using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Content;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using static UnityEngine.EventSystems.EventTrigger;
+using static UnityEngine.GraphicsBuffer;
 
 namespace AddressableReferencer.Editor.Build.SchemaBuilders
 {
     /// <summary>
     /// Preprocessor Schema builder that will gather the Addressables references and provide it to the build pipeline through a <see cref="ReferenceIdentifier"/>.
+    /// 
     /// </summary>
     public class ReferenceSchemaBuilder : ISchemaBuilder
     {
@@ -29,7 +38,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         /// <inheritdoc/>
         public bool CanBuildSchema(AddressableAssetGroupSchema schema)
         {
-            throw new System.NotImplementedException();
+            return schema is AddressableReferenceSchema;
         }
         /// <inheritdoc/>
         public void Init(AddressableAssetsBuildContext aaContext, AddressablesDataBuilderInput builderInput, BuildContext buildContext, IDataBuilder dataBuilder)
@@ -77,6 +86,16 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
 
             return string.Empty;
         }
+        private void ProcessBuiltInBundle(AddressableAssetsBuildContext aaContext)
+        {
+            if (!AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
+                return;
+
+            var entry = AddressableReferencerDefaultObject.Settings.BuiltInBundleEntry;
+            entry.internalName = IResourceLocationExtension.GetBuiltInBundleNamePrefix(aaContext) + $"{BuildScriptBase.BuiltInBundleBaseName}.bundle";
+            AddressableReferencerDefaultObject.Settings.Save();
+
+            m_bundleReferences.TryAdd(entry.internalName, entry.cabName);
 
             foreach (var map in entry.ObjectMappingDict)
             {
