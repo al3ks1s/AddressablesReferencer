@@ -80,15 +80,30 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
             var referenceGroups = aaContext.Settings.groups.Where(g => g.IsReferenceGroup() && g.GetSchema<BundledAssetGroupSchema>().IncludeInBuild && g.GetSchema<BundledAssetGroupSchema>().IsEnabled);
             List<(ContentCatalogDataEntry, AddressableReferenceEntry)> referenceLocations = new();
 
-        public bool CanBuildSchema(AddressableAssetGroupSchema schema)
-        {
-            throw new System.NotImplementedException();
-        }
+            foreach (var group in referenceGroups)
+            {
+                bool stripHashFromBundleLocation = false;
+                if (group.HasSchema<BundledAssetGroupSchema>())
+                    stripHashFromBundleLocation = group.GetSchema<BundledAssetGroupSchema>().BundleNaming == BundledAssetGroupSchema.BundleNamingStyle.NoHash;
 
-        public List<ContentCatalogData> GenerateCatalogs(AddressablesDataBuilderInput builderInput, AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
-        {
-            throw new System.NotImplementedException();
-        }
+                foreach (var bundle in aaContext.assetGroupToBundles[group])
+                {
+                    var outputBundleName = aaContext.internalToOutputBundleName[bundle];
+                    var location = aaContext.locations.Find(l => l.Keys.Select(lk => stripHashFromBundleLocation ? StripHashFromBundleLocation(lk.ToString()) : lk.ToString()).Contains(outputBundleName));
+
+                    m_internalNameToReferenceEntry.TryGetValue(bundle, out var referenceEntry);
+
+                    referenceLocations.Add((location, referenceEntry));
+                }
+            }
+
+            foreach (var entryPair in referenceLocations)
+            {
+                var catalogLocation = entryPair.Item1;
+                var baseLocation = entryPair.Item2;
+
+                FormatLocationFromReferenceEntry(catalogLocation, baseLocation);
+            }
 
             if (AddressableReferencerDefaultObject.Settings.UseBaseGameBuiltinAssets)
             {
@@ -138,7 +153,7 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         }
         private void FormatLocationFromReferenceEntry(ContentCatalogDataEntry catalogLocation, AddressableReferenceEntry referenceEntry)
         {
-            throw new System.NotImplementedException();
+            catalogLocation.InternalId = referenceEntry.baseInternalId.Replace("{BuildTarget}", EditorUserBuildSettings.activeBuildTarget.ToString());
         }
 
 
