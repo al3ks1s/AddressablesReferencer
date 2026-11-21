@@ -1,6 +1,7 @@
 using AddressableReferencer.Editor.Settings;
 using AddressableReferencer.Editor.Utilities;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build;
@@ -9,6 +10,7 @@ using UnityEditor.AddressableAssets.Build.DataBuilders;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build.Pipeline;
+using UnityEngine;
 using UnityEngine.AddressableAssets.ResourceLocators;
 namespace AddressableReferencer.Editor.Build.SchemaBuilders
 {
@@ -35,6 +37,13 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
         }
 
         public void Build(AddressableAssetsBuildContext aaContext, AddressablesPlayerBuildResult addrResult)
+        {
+            ProcessBundleLocations(aaContext);
+            ProcessNonBundleLocations(aaContext);
+        }
+
+
+        public void ProcessBundleLocations(AddressableAssetsBuildContext aaContext)
         {
             var referenceGroups = aaContext.Settings.groups.Where(g => g.IsReferenceGroup() && g.GetSchema<BundledAssetGroupSchema>().IncludeInBuild && g.GetSchema<BundledAssetGroupSchema>().IsEnabled);
             List<(ContentCatalogDataEntry, AddressableReferenceEntry)> referenceLocations = new();
@@ -78,7 +87,51 @@ namespace AddressableReferencer.Editor.Build.SchemaBuilders
                 }
             }
         }
-        
+
+        public void ProcessNonBundleLocations(AddressableAssetsBuildContext aaContext)
+        {
+            var nonBundleLocations = aaContext.locations.Where(l => l.Provider != "UnityEngine.ResourceManagement.ResourceProviders.AssetBundleProvider");
+
+            string GameRoot = Path.Combine("Assets", AddressableReferencerDefaultObject.Settings.RelativeAssetsRoot).Replace("\\", "/");
+
+            foreach (var nonBundleLocation in nonBundleLocations)
+            {
+                var internalId = nonBundleLocation.InternalId;
+                var locationGuid = AssetDatabase.AssetPathToGUID(internalId);
+                
+                bool isReference = false;
+
+                // This is probably a subfolder location, meaning it doesn't get its own addressable entry directly
+                if (aaContext.Settings.FindAssetEntry(locationGuid) == null)
+                {
+                    var currentPath = internalId;
+                    locationGuid = AssetDatabase.AssetPathToGUID(internalId);
+
+                    while (aaContext.Settings.FindAssetEntry(locationGuid) == null && Path.GetDirectoryName(currentPath) != null)
+                    {
+                        currentPath = Path.GetDirectoryName(currentPath).Replace("\\", "/");
+                        locationGuid = AssetDatabase.AssetPathToGUID(currentPath);
+                    }
+                }
+
+                if (aaContext.Settings.FindAssetEntry(locationGuid) == null)
+                    continue;
+
+                isReference = aaContext.Settings.FindAssetEntry(locationGuid).parentGroup.HasSchema<AddressableReferenceSchema>();
+                
+                if (!isReference)
+                    continue;
+
+                string AssetRelativePath = Path.GetRelativePath(GameRoot, internalId);
+                string newInternalId = Path.Combine("Assets", AssetRelativePath).Replace("\\", "/");
+
+                nonBundleLocation.InternalId = newInternalId;
+            }
+
+        }
+
+
+
         public string ProcessGroupSchema(AddressableAssetsBuildContext aaContext, AddressableAssetGroupSchema schema)
         {
             if (!CanBuildSchema(schema))
