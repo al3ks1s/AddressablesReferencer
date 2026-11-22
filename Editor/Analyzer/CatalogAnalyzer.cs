@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -75,11 +76,20 @@ namespace AddressableReferencer.Editor.Analyzer
                 return false;
             }
 
-            bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
+            try { 
+                bundles = Locator.AllLocations.Where(f => f.ProviderId == typeof(AssetBundleProvider).ToString()).ToList();
+            } 
+            catch (Exception e)
+            {
+                EditorUtility.DisplayDialog("Addressables Referencer", "An error occured during the catalog loading. This might mean one or more scripts referenced in the catalog are missing from your assets. Ensure the game export has properly generated the scripts.", "Ok");
+                Debug.LogError(e);
+                UnloadCatalog();
+                CleanupMemory();
+                return false;
+            }
+
             monoscript = TryFindMonoscriptBundle();
             unitybuiltins = TryFindBuiltinAssetsBundle();
-
-            IdentifyGroups();
 
             ClearTracker();
 
