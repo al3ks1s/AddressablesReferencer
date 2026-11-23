@@ -387,6 +387,7 @@ namespace AddressableReferencer.Editor.GUI
             if (!analyzer.LoadCatalog(catalogPath))
             {
                 m_StreamingAssetPath = "Select the StreamingAssets folder";
+                Debug.LogError($"An error occured during the catalog loading. This might mean one or more scripts referenced in the catalog are missing from your assets. Ensure the game export has properly generated the scripts.");
                 return null;
             }
 

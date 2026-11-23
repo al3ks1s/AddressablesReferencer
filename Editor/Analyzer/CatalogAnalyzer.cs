@@ -81,7 +81,6 @@ namespace AddressableReferencer.Editor.Analyzer
             } 
             catch (Exception e)
             {
-                EditorUtility.DisplayDialog("Addressables Referencer", "An error occured during the catalog loading. This might mean one or more scripts referenced in the catalog are missing from your assets. Ensure the game export has properly generated the scripts.", "Ok");
                 Debug.LogError(e);
                 UnloadCatalog();
                 CleanupMemory();
@@ -457,24 +456,23 @@ namespace AddressableReferencer.Editor.Analyzer
                     continue;
                 }
 
-                AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(assetGuid, SceneGroup, true, true);
+                var existingEntry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(assetGuid);
+
+                if (existingEntry == null)
+                    AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(assetGuid, SceneGroup, true, true);
+
+                if (existingEntry.parentGroup != SceneGroup)
+                    AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(assetGuid, SceneGroup, true, true);
+
             }
         }
         public void RekeyLocation(IResourceLocation location)
         {
 
-            var entries = AddressableAssetSettingsDefaultObject.Settings.groups
-                .Where(g => g != null)
-                .SelectMany(g => g.entries)
-                .Where(e => e.AssetPath.Equals(GetAssetPath(location.InternalId)));
+            var entry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(AssetDatabase.AssetPathToGUID(GetAssetPath(location.InternalId)));
 
-            if (entries.Count() == 0)
+            if (!entry.parentGroup.HasSchema<AddressableReferenceSchema>())
                 return;
-
-            var entry = entries.First();
-
-            if (entries.Count() > 1)
-                Debug.LogWarning($"Encountered multiple entries when trying to re-key entry {entry.address} to {location.PrimaryKey}");
 
             Debug.Log($"[AD9S Referencer] Setting addressable entry address from {entry.address} to {location.PrimaryKey}");
             entry.SetAddress(location.PrimaryKey);
