@@ -458,8 +458,10 @@ namespace AddressableReferencer.Editor.Analyzer
 
                 var existingEntry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(assetGuid);
 
-                if (existingEntry == null)
+                if (existingEntry == null) { 
                     AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(assetGuid, SceneGroup, true, true);
+                    continue;
+                }
 
                 if (existingEntry.parentGroup != SceneGroup)
                     AddressableAssetSettingsDefaultObject.Settings.CreateOrMoveEntry(assetGuid, SceneGroup, true, true);
@@ -470,6 +472,11 @@ namespace AddressableReferencer.Editor.Analyzer
         {
 
             var entry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(AssetDatabase.AssetPathToGUID(GetAssetPath(location.InternalId)));
+
+            Debug.Log($"{GetAssetPath(location.InternalId)} {entry == null}");
+
+            if (entry == null)
+                return;
 
             if (!entry.parentGroup.HasSchema<AddressableReferenceSchema>())
                 return;
