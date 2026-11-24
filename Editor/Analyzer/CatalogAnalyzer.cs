@@ -473,10 +473,10 @@ namespace AddressableReferencer.Editor.Analyzer
 
             var entry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(AssetDatabase.AssetPathToGUID(GetAssetPath(location.InternalId)));
 
-            Debug.Log($"{GetAssetPath(location.InternalId)} {entry == null}");
-
-            if (entry == null)
+            if (entry == null) {
+                Debug.LogWarning($"Could not rekey location {GetAssetPath(location.InternalId)}. No entry found");
                 return;
+            }
 
             if (!entry.parentGroup.HasSchema<AddressableReferenceSchema>())
                 return;
